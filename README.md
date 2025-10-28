@@ -94,6 +94,28 @@ function Modal({ isOpen, children }) {
 }
 ```
 
+#### `useMediaQuery(query: string)`
+Responsive design hook using CSS media queries with predefined breakpoints.
+
+```tsx
+import { useMediaQuery, MEDIA_QUERIES } from 'reactilities';
+
+function ResponsiveComponent() {
+  const isMobile = useMediaQuery(MEDIA_QUERIES.IS_SMALL_DEVICE);
+  const isDesktop = useMediaQuery(MEDIA_QUERIES.IS_LARGER_DEVICE);
+  const isDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
+  const isLandscape = useMediaQuery('(orientation: landscape)');
+  
+  return (
+    <div>
+      {isMobile ? <MobileNav /> : <DesktopNav />}
+      {isDarkMode && <DarkModeStyles />}
+      <p>Orientation: {isLandscape ? 'Landscape' : 'Portrait'}</p>
+    </div>
+  );
+}
+```
+
 ### 🔄 State Hooks
 
 #### `useLocalStorage<T>(key: string, initialValue: T)`
@@ -120,6 +142,32 @@ function Settings() {
       {/* Remove from storage */}
       <button onClick={() => setUser(null)}>
         Clear User
+      </button>
+    </div>
+  );
+}
+```
+
+#### `useSessionStorage<T>(key: string, initialValue: T)`
+Syncs state with sessionStorage (session-only persistence).
+
+```tsx
+import { useSessionStorage } from 'reactilities';
+
+function ShoppingCart() {
+  const [cart, setCart] = useSessionStorage('cart', []);
+  const [checkoutStep, setCheckoutStep] = useSessionStorage('checkoutStep', 1);
+  
+  const addToCart = (item) => {
+    setCart(prevCart => [...prevCart, item]);
+  };
+  
+  return (
+    <div>
+      <p>Items in cart: {cart.length}</p>
+      <p>Checkout step: {checkoutStep}</p>
+      <button onClick={() => setCheckoutStep(step => step + 1)}>
+        Next Step
       </button>
     </div>
   );
@@ -173,6 +221,172 @@ function SearchComponent() {
 }
 ```
 
+#### `useThrottle<T>(value: T, interval?: number)`
+Throttles rapidly changing values to limit update frequency.
+
+```tsx
+import { useThrottle } from 'reactilities';
+
+function ScrollTracker() {
+  const [scrollY, setScrollY] = useState(0);
+  const throttledScrollY = useThrottle(scrollY, 100);
+  
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  
+  return <div>Scroll position: {throttledScrollY}px</div>;
+}
+```
+
+#### `useNetworkState()`
+Monitors network connection status and quality.
+
+```tsx
+import { useNetworkState } from 'reactilities';
+
+function NetworkIndicator() {
+  const networkState = useNetworkState();
+  
+  return (
+    <div>
+      <p>Online: {networkState.online ? 'Yes' : 'No'}</p>
+      <p>Connection: {networkState.effectiveType}</p>
+      <p>Downlink: {networkState.downlink} Mbps</p>
+      {networkState.saveData && <p>⚠️ Data Saver Mode</p>}
+    </div>
+  );
+}
+```
+
+#### `useGeolocation(options?)`
+Gets user's current location with permission handling.
+
+```tsx
+import { useGeolocation } from 'reactilities';
+
+function LocationTracker() {
+  const { location, error, loading } = useGeolocation({
+    enableHighAccuracy: true,
+    timeout: 10000
+  });
+  
+  if (loading) return <div>Getting location...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <p>Latitude: {location?.latitude}</p>
+      <p>Longitude: {location?.longitude}</p>
+      <p>Accuracy: {location?.accuracy}m</p>
+    </div>
+  );
+}
+```
+
+#### `useIntersectionObserver(options?)`
+Observes element visibility in viewport.
+
+```tsx
+import { useIntersectionObserver } from 'reactilities';
+
+function LazyImage({ src, alt }) {
+  const [ref, isIntersecting] = useIntersectionObserver({
+    threshold: 0.1,
+    rootMargin: '50px'
+  });
+  
+  return (
+    <div ref={ref}>
+      {isIntersecting ? (
+        <img src={src} alt={alt} />
+      ) : (
+        <div className="placeholder">Loading...</div>
+      )}
+    </div>
+  );
+}
+```
+
+#### `useKeyboardShortcuts(shortcuts)`
+Handles keyboard shortcuts with customizable key combinations.
+
+```tsx
+import { useKeyboardShortcuts } from 'reactilities';
+
+function Editor() {
+  const [content, setContent] = useState('');
+  
+  useKeyboardShortcuts({
+    'ctrl+s': () => saveDocument(content),
+    'ctrl+z': () => undo(),
+    'ctrl+shift+z': () => redo(),
+    'escape': () => closeModal()
+  });
+  
+  return <textarea value={content} onChange={(e) => setContent(e.target.value)} />;
+}
+```
+
+#### `useWebSocket(url, options?)`
+Manages WebSocket connections with automatic reconnection.
+
+```tsx
+import { useWebSocket } from 'reactilities';
+
+function ChatComponent() {
+  const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
+    'ws://localhost:8080/chat',
+    {
+      onOpen: () => console.log('Connected'),
+      onClose: () => console.log('Disconnected'),
+      shouldReconnect: () => true,
+      reconnectAttempts: 5
+    }
+  );
+  
+  const sendMessage = () => {
+    sendJsonMessage({ type: 'message', content: 'Hello!' });
+  };
+  
+  return (
+    <div>
+      <p>Status: {readyState === 1 ? 'Connected' : 'Disconnected'}</p>
+      <p>Last message: {lastJsonMessage?.content}</p>
+      <button onClick={sendMessage}>Send Message</button>
+    </div>
+  );
+}
+```
+
+#### `useVirtualization(options)`
+Efficient rendering for large lists with virtual scrolling.
+
+```tsx
+import { useVirtualization } from 'reactilities';
+
+function VirtualList({ items }) {
+  const { containerRef, visibleItems, scrollToIndex } = useVirtualization({
+    items,
+    itemHeight: 50,
+    containerHeight: 400,
+    overscan: 5
+  });
+  
+  return (
+    <div ref={containerRef} style={{ height: 400, overflow: 'auto' }}>
+      {visibleItems.map(({ item, index, style }) => (
+        <div key={index} style={style}>
+          {item.name}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
 ### 🛠️ Helper Functions
 
 #### `classnames(...args: ClassValue[])`
@@ -222,7 +436,17 @@ const [user, setUser] = useLocalStorage('user', { name: 'John', age: 30 });
 
 // Generic types are supported
 const debouncedValue = useDebounce<string>('hello', 300);
-// debouncedValue is typed as string
+const throttledValue = useThrottle<number>(scrollY, 100);
+
+// Media queries with predefined constants
+const isMobile = useMediaQuery(MEDIA_QUERIES.IS_SMALL_DEVICE);
+
+// Network state is fully typed
+const networkState = useNetworkState();
+// networkState.effectiveType is typed as "slow-2g" | "2g" | "3g" | "4g"
+
+// WebSocket with typed messages
+const { sendJsonMessage, lastJsonMessage } = useWebSocket<ChatMessage>(url);
 
 // Event listeners are properly typed
 useEventListener(buttonRef, 'click', (event: MouseEvent) => {
@@ -232,7 +456,7 @@ useEventListener(buttonRef, 'click', (event: MouseEvent) => {
 
 ## 🧪 Testing
 
-Reactilities comes with comprehensive tests (99%+ coverage) and is battle-tested in production applications.
+Reactilities comes with comprehensive tests (99%+ coverage).
 
 ## 📄 License
 
@@ -244,9 +468,17 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📝 Changelog
 
+### v0.1.2
+- Fixed export issues - all hooks now use named exports
+- Removed test files from distribution bundle
+- Updated documentation with all available hooks
+
+### v0.1.1
+- Fixed hook exports and improved TypeScript support
+
 ### v0.1.0
 - Initial release
-- DOM hooks: `useDocumentTitle`, `useEventListener`, `useFavicon`, `useLockBodyScroll`
-- State hooks: `useLocalStorage`, `useCopyToClipboard`  
-- Utility hooks: `useDebounce`
-- Helper functions: `classnames`
+- **DOM hooks:** `useDocumentTitle`, `useEventListener`, `useFavicon`, `useLockBodyScroll`, `useMediaQuery`
+- **State hooks:** `useLocalStorage`, `useSessionStorage`, `useCopyToClipboard`  
+- **Utility hooks:** `useDebounce`, `useThrottle`, `useNetworkState`, `useGeolocation`, `useIntersectionObserver`, `useKeyboardShortcuts`, `useWebSocket`, `useVirtualization`
+- **Helper functions:** `classnames`
