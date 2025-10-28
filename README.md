@@ -236,7 +236,7 @@ Reactilities comes with comprehensive tests (99%+ coverage) and is battle-tested
 
 ## 📄 License
 
-MIT © [Petar Basic](https://github.com/petarbasic)
+MIT © [Petar Basic](https://github.com/petar-basic)
 
 ## 🤝 Contributing
 

@@ -41,7 +41,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "rm -rf dist && tsc -b && vite build",
     "build:lib": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

@@ -11,7 +11,7 @@ export default defineConfig({
     dts({
       insertTypesEntry: true,
       include: ['lib/**/*', 'src/**/*'],
-      exclude: ['**/*.test.*', '**/*.spec.*'],
+      exclude: ['**/*.test.*', '**/*.spec.*', '**/test/**/*', 'src/test/**/*'],
       tsconfigPath: './tsconfig.lib.json'
     })
   ],
