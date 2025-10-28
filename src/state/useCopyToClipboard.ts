@@ -49,7 +49,7 @@ function oldSchoolCopy(text: string) {
  *   );
  * }
  */
-export default function useCopyToClipboard(): [string | null, (value: string) => void] {
+export function useCopyToClipboard(): [string | null, (value: string) => void] {
   const [state, setState] = useState<string | null>(null);
 
   const copyToClipboard = useCallback((value: string) => {

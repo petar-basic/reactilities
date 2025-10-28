@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import useDocumentTitle from '../useDocumentTitle'
+import { useDocumentTitle } from '../useDocumentTitle'
 
 describe('useDocumentTitle', () => {
   let originalTitle: string

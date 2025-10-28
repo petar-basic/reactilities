@@ -16,7 +16,7 @@ import { useEffect } from "react";
  * // Using data URLs
  * useFavicon('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg">...</svg>');
  */
-export default function useFavicon(url: string): void {
+export function useFavicon(url: string): void {
   useEffect(() => {
     let link = document.querySelector(`link[rel~="icon"]`)
 

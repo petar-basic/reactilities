@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import useLockBodyScroll from '../useLockBodyScroll'
+import { useLockBodyScroll } from '../useLockBodyScroll'
 
 describe('useLockBodyScroll', () => {
   let mockGetComputedStyle: ReturnType<typeof vi.fn>

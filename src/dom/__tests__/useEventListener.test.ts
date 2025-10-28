@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useRef } from 'react'
-import useEventListener from '../useEventListener'
+import { useEventListener } from '../useEventListener'
 
 describe('useEventListener', () => {
   let mockElement: HTMLElement

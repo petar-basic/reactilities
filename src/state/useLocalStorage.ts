@@ -66,7 +66,7 @@ const getServerSnapshot = () => {
  * // Remove from storage
  * setUser(null); // or setUser(undefined)
  */
-export default function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prevValue: T) => T) | null | undefined) => void] {
+export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prevValue: T) => T) | null | undefined) => void] {
   const getSnapshot = () => getItem(key);
 
   const store = useSyncExternalStore(

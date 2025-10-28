@@ -38,7 +38,7 @@ export const MEDIA_QUERIES = {
  *   </div>
  * );
  */
-export default function useMediaQuery(query: string): boolean {
+export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (cb: () => void) => {
       const matchMedia = window.matchMedia(query);

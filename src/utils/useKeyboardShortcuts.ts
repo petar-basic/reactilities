@@ -47,7 +47,7 @@ interface UseKeyboardShortcutsOptions {
  *   enabled: true
  * });
  */
-export default function useKeyboardShortcuts(
+export function useKeyboardShortcuts(
   shortcuts: KeyboardShortcut[],
   options: UseKeyboardShortcutsOptions = {}
 ): void {

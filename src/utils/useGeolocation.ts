@@ -45,7 +45,7 @@ interface GeolocationState {
  * const location = useGeolocation();
  * const isLocationAvailable = location.latitude && location.longitude;
  */
-export default function useGeolocation(options: PositionOptions = {}): GeolocationState {
+export function useGeolocation(options: PositionOptions = {}): GeolocationState {
   const [state, setState] = useState<GeolocationState>({
     loading: true,
     accuracy: null,

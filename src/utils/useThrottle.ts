@@ -27,7 +27,7 @@ import { useEffect, useRef, useState } from "react";
  * const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
  * const throttledMousePos = useThrottle(mousePos, 50);
  */
-export default function useThrottle<T>(value: T, interval = 500): T {
+export function useThrottle<T>(value: T, interval = 500): T {
   const [throttledValue, setThrottledValue] = useState(value);
   const lastUpdated = useRef<number | null>(null);
 

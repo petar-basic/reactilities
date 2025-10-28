@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import useFavicon from '../useFavicon'
+import { useFavicon } from '../useFavicon'
 
 describe('useFavicon', () => {
   let mockLink: HTMLLinkElement

@@ -56,7 +56,7 @@ interface UseVirtualizationReturn {
  *   </div>
  * );
  */
-export default function useVirtualization(
+export function useVirtualization(
   itemCount: number,
   options: UseVirtualizationOptions
 ): UseVirtualizationReturn {

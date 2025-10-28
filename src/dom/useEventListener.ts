@@ -19,7 +19,7 @@ import { useEffectEvent, useEffect, type RefObject } from "react";
  * // With options
  * useEventListener(scrollRef, 'scroll', handleScroll, { passive: true });
  */
-export default function useEventListener(
+export function useEventListener(
   target: RefObject<HTMLElement>, 
   eventName: string, 
   handler: (event: Event) => void, 

@@ -109,7 +109,7 @@ const getServerSnapshot = () => {
  *   );
  * }
  */
-export default function useNetworkState() {
+export function useNetworkState() {
   const cache = useRef({});
 
   const getSnapshot = () => {

@@ -13,7 +13,7 @@ import { useEffect } from "react";
  * const [user, setUser] = useState(null);
  * useDocumentTitle(user ? `Welcome ${user.name}` : 'Login');
  */
-export default function useDocumentTitle(title: string): void {
+export function useDocumentTitle(title: string): void {
   useEffect(() => {
     document.title = title;
   }, [title])

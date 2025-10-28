@@ -69,7 +69,7 @@ const getServerSnapshot = () => {
  * // Temporary UI state
  * const [sidebarOpen, setSidebarOpen] = useSessionStorage('sidebarOpen', false);
  */
-export default function useSessionStorage(key: string, initialValue: string): any[] {
+export function useSessionStorage(key: string, initialValue: string): any[] {
   const getSnapshot = () => getItem(key);
 
   const store = useSyncExternalStore(

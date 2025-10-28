@@ -29,7 +29,7 @@ interface UseIntersectionObserverReturn {
  *   </div>
  * );
  */
-export default function useIntersectionObserver(
+export function useIntersectionObserver(
   options: UseIntersectionObserverOptions = {}
 ): UseIntersectionObserverReturn {
   const { freezeOnceVisible = false, ...observerOptions } = options;

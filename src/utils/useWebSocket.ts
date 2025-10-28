@@ -42,7 +42,7 @@ interface UseWebSocketReturn {
  *   sendJsonMessage({ type: 'chat', message: 'Hello!' });
  * };
  */
-export default function useWebSocket(
+export function useWebSocket(
   socketUrl: string | null,
   options: UseWebSocketOptions = {}
 ): UseWebSocketReturn {
