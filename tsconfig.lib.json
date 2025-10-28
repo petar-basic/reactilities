@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./dist",
+    "noEmit": false,
+    "verbatimModuleSyntax": false
+  },
+  "include": [
+    "lib/**/*",
+    "src/**/*"
+  ],
+  "exclude": [
+    "**/*.test.*",
+    "**/*.spec.*",
+    "src/main.tsx",
+    "src/App.tsx"
+  ]
+}

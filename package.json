@@ -1,0 +1,80 @@
+{
+  "name": "reactilities",
+  "version": "0.1.0",
+  "description": "A comprehensive collection of useful React hooks and utilities for modern web development",
+  "keywords": [
+    "react",
+    "hooks",
+    "utilities",
+    "typescript",
+    "frontend",
+    "ui",
+    "components",
+    "state-management",
+    "dom",
+    "helpers"
+  ],
+  "author": "Petar Basic",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/petarbasic/reactilities.git"
+  },
+  "homepage": "https://github.com/petarbasic/reactilities#readme",
+  "bugs": {
+    "url": "https://github.com/petarbasic/reactilities/issues"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/reactilities.umd.cjs",
+  "module": "./dist/reactilities.js",
+  "types": "./dist/main.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/reactilities.js",
+      "require": "./dist/reactilities.umd.cjs"
+    },
+    "./style.css": "./dist/reactilities.css"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "build:lib": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react-swc": "^4.1.0",
+    "@vitest/coverage-v8": "^4.0.4",
+    "eslint": "^9.36.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.22",
+    "globals": "^16.4.0",
+    "jsdom": "^27.0.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.45.0",
+    "vite": "^7.1.7",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.4"
+  }
+}
