@@ -25,6 +25,16 @@ interface NetworkInformation extends EventTarget {
     | "unknown";
 }
 
+export interface NetworkState {
+  online: boolean;
+  downlink?: number;
+  downlinkMax?: number;
+  effectiveType?: "slow-2g" | "2g" | "3g" | "4g";
+  rtt?: number;
+  saveData?: boolean;
+  type?: "bluetooth" | "cellular" | "ethernet" | "none" | "wifi" | "wimax" | "other" | "unknown";
+}
+
 const isShallowEqual = (object1: any, object2: any) => {
   const keys1 = Object.keys(object1);
   const keys2 = Object.keys(object2);
@@ -109,8 +119,8 @@ const getServerSnapshot = () => {
  *   );
  * }
  */
-export function useNetworkState() {
-  const cache = useRef({});
+export function useNetworkState(): NetworkState {
+  const cache = useRef<NetworkState | null>(null);
 
   const getSnapshot = () => {
     const online = navigator.onLine;
@@ -126,7 +136,7 @@ export function useNetworkState() {
       type: connection?.type,
     };
 
-    if (isShallowEqual(cache.current, nextState)) {
+    if (cache.current && isShallowEqual(cache.current, nextState)) {
       return cache.current;
     } else {
       cache.current = nextState;

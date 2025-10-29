@@ -23,7 +23,9 @@ pnpm add reactilities
 ## 🎯 Features
 
 - 🪝 **React Hooks** - DOM manipulation, state management, and utility hooks
+- 🔄 **Lifecycle Helpers** - Class component lifecycle methods as hooks
 - 🎨 **Helper Functions** - Utility functions for common tasks
+- 🔷 **TypeScript Types** - Utility types for better type safety
 - 📱 **TypeScript First** - Full TypeScript support with excellent IntelliSense
 - 🧪 **Well Tested** - 99%+ test coverage with comprehensive test suite
 - 📦 **Tree Shakable** - Import only what you need
@@ -116,6 +118,52 @@ function ResponsiveComponent() {
 }
 ```
 
+#### `useClickOutside<T>(ref, handler)`
+Detects clicks outside of a specified element.
+
+```tsx
+import { useClickOutside } from 'reactilities';
+
+function Dropdown() {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside(dropdownRef, () => {
+    setIsOpen(false);
+  });
+
+  return (
+    <div ref={dropdownRef}>
+      <button onClick={() => setIsOpen(!isOpen)}>
+        Toggle Dropdown
+      </button>
+      {isOpen && (
+        <div className="dropdown-menu">
+          <div>Option 1</div>
+          <div>Option 2</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Modal with click outside to close
+function Modal({ onClose }) {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside(modalRef, onClose);
+
+  return (
+    <div className="modal-overlay">
+      <div ref={modalRef} className="modal-content">
+        <h2>Modal Title</h2>
+        <p>Click outside to close</p>
+      </div>
+    </div>
+  );
+}
+```
+
 ### 🔄 State Hooks
 
 #### `useLocalStorage<T>(key: string, initialValue: T)`
@@ -188,6 +236,120 @@ function ShareButton({ url }) {
     <button onClick={() => copyToClipboard(url)}>
       {isCopied ? 'Copied!' : 'Copy Link'}
     </button>
+  );
+}
+```
+
+#### `useToggle(initialValue?: boolean)`
+Manages boolean toggle state with flexible value setting.
+
+```tsx
+import { useToggle } from 'reactilities';
+
+function ToggleExample() {
+  const [isVisible, toggleVisible] = useToggle(false);
+  const [isEnabled, toggleEnabled] = useToggle(true);
+
+  return (
+    <div>
+      <button onClick={() => toggleVisible()}>
+        {isVisible ? 'Hide' : 'Show'} Content
+      </button>
+      
+      {isVisible && <div>Toggled Content</div>}
+      
+      <button onClick={() => toggleEnabled(false)}>Disable</button>
+      <button onClick={() => toggleEnabled(true)}>Enable</button>
+      
+      <input disabled={!isEnabled} placeholder="Type here..." />
+    </div>
+  );
+}
+
+// Modal toggle
+function Modal() {
+  const [isOpen, toggleModal] = useToggle(false);
+
+  return (
+    <>
+      <button onClick={() => toggleModal(true)}>Open Modal</button>
+      {isOpen && (
+        <div className="modal">
+          <button onClick={() => toggleModal(false)}>Close</button>
+          <button onClick={() => toggleModal()}>Toggle</button>
+        </div>
+      )}
+    </>
+  );
+}
+```
+
+#### `useObjectState<T>(initialValue: T)`
+Manages object state with partial updates, similar to class component setState.
+
+```tsx
+import { useObjectState } from 'reactilities';
+
+function UserProfile() {
+  const [user, setUser] = useObjectState({
+    name: 'John',
+    age: 30,
+    email: 'john@example.com'
+  });
+
+  const updateName = () => {
+    setUser({ name: 'Jonathan' }); // { name: "Jonathan", age: 30, email: "john@example.com" }
+  };
+
+  const incrementAge = () => {
+    setUser((s) => ({ age: s.age + 1 })); // { name: "Jonathan", age: 31, email: "john@example.com" }
+  };
+
+  return (
+    <div>
+      <p>Name: {user.name}</p>
+      <p>Age: {user.age}</p>
+      <p>Email: {user.email}</p>
+      <button onClick={updateName}>Update Name</button>
+      <button onClick={incrementAge}>Increment Age</button>
+    </div>
+  );
+}
+
+// Form state management
+function ContactForm() {
+  const [formData, setFormData] = useObjectState({
+    name: '',
+    email: '',
+    message: '',
+    isSubmitting: false
+  });
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({ [field]: value });
+  };
+
+  const handleSubmit = async () => {
+    setFormData({ isSubmitting: true });
+    
+    try {
+      await submitForm(formData);
+      setFormData({ name: '', email: '', message: '', isSubmitting: false });
+    } catch (error) {
+      setFormData({ isSubmitting: false });
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input 
+        value={formData.name}
+        onChange={(e) => handleInputChange('name', e.target.value)}
+      />
+      <button disabled={formData.isSubmitting}>
+        {formData.isSubmitting ? 'Submitting...' : 'Submit'}
+      </button>
+    </form>
   );
 }
 ```
@@ -387,6 +549,74 @@ function VirtualList({ items }) {
 }
 ```
 
+### 🔄 Lifecycle Helpers
+
+#### `componentDidMount(func: () => void)`
+React hook equivalent to componentDidMount lifecycle method.
+
+```tsx
+import { componentDidMount } from 'reactilities';
+
+function MyComponent() {
+  componentDidMount(() => {
+    console.log('Component mounted');
+    // Fetch initial data
+    fetchUserData();
+  });
+
+  return <div>My Component</div>;
+}
+```
+
+#### `componentWillMount(func: () => void)`
+React hook equivalent to componentWillMount lifecycle method.
+
+```tsx
+import { componentWillMount } from 'reactilities';
+
+function MyComponent() {
+  componentWillMount(() => {
+    // Set up initial state or configuration
+    initializeComponent();
+  });
+
+  return <div>My Component</div>;
+}
+```
+
+#### `componentDidUpdate(func: () => void)`
+React hook equivalent to componentDidUpdate lifecycle method.
+
+```tsx
+import { componentDidUpdate } from 'reactilities';
+
+function MyComponent({ userId }) {
+  componentDidUpdate(() => {
+    // Update document title or perform side effects
+    document.title = `User ${userId}`;
+  });
+
+  return <div>User Profile</div>;
+}
+```
+
+#### `componentWillUnmount(func: () => void)`
+React hook equivalent to componentWillUnmount lifecycle method.
+
+```tsx
+import { componentWillUnmount } from 'reactilities';
+
+function MyComponent() {
+  componentWillUnmount(() => {
+    // Cleanup subscriptions, timers, etc.
+    clearInterval(intervalId);
+    socket.disconnect();
+  });
+
+  return <div>My Component</div>;
+}
+```
+
 ### 🛠️ Helper Functions
 
 #### `classnames(...args: ClassValue[])`
@@ -423,6 +653,196 @@ function Button({ variant, size, disabled, className, children }) {
 >
   Click me
 </Button>
+```
+
+#### `loadScript(config: LoadScriptProps)`
+Dynamically loads and executes JavaScript code by creating a script element.
+
+```tsx
+import { loadScript } from 'reactilities';
+
+// Load Google Tag Manager before React app
+const GOOGLE_TAG_MANAGER = {
+  scriptProps: {},
+  inlineScript: `
+    (function (w, d, s, l, i) {
+      w[l] = w[l] || [];
+      w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+      var f = d.getElementsByTagName(s)[0],
+        j = d.createElement(s),
+        dl = l != 'dataLayer' ? '&l=' + l : '';
+      j.async = true;
+      j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+      f.parentNode.insertBefore(j, f);
+    })(window, document, 'script', 'dataLayer', 'GTM-KEY');
+  `,
+};
+
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+
+loadScript(GOOGLE_TAG_MANAGER);
+
+root.render(
+  <StrictMode>
+    <RouterProvider router={router} />
+  </StrictMode>
+);
+
+// Load external script with attributes
+loadScript({
+  scriptProps: {
+    src: 'https://cdn.example.com/analytics.js',
+    async: true,
+    defer: true
+  },
+  inlineScript: ''
+});
+```
+
+### 🔷 TypeScript Types
+
+Reactilities includes powerful utility types for better type safety:
+
+- **`Nullable<T>`** - Makes a type nullable (T | null)
+- **`Maybe<T>`** - Makes a type nullable and undefined (T | null | undefined)
+- **`ValueOf<T>`** - Extracts all possible values from an object type
+- **`DeepPartial<T>`** - Makes all properties optional recursively
+- **`VoidFunction<T>`** - Type for void-returning functions with typed parameters
+
+#### `Nullable<T>`
+Utility type that makes a type nullable by adding null to the union.
+
+```tsx
+import { Nullable } from 'reactilities';
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type NullableUser = Nullable<User>; // User | null
+
+function getUser(id: string): Nullable<User> {
+  const user = users.find(u => u.id === id);
+  return user || null;
+}
+
+// With primitive types
+type NullableString = Nullable<string>; // string | null
+type NullableNumber = Nullable<number>; // number | null
+```
+
+#### `Maybe<T>`
+Utility type that makes a type nullable and undefined (T | null | undefined).
+
+```tsx
+import { Maybe } from 'reactilities';
+
+function findUser(id: string): Maybe<User> {
+  const user = database.users.find(u => u.id === id);
+  return user; // Can be User, null, or undefined
+}
+
+const user = findUser('123');
+if (user) {
+  console.log(user.name); // TypeScript knows user exists
+}
+
+// API response handling
+interface ApiResponse<T> {
+  data: Maybe<T>;
+  error: Maybe<string>;
+}
+```
+
+#### `ValueOf<T>`
+Extracts all possible values from an object type as a union.
+
+```tsx
+import { ValueOf } from 'reactilities';
+
+const Colors = {
+  RED: '#ff0000',
+  GREEN: '#00ff00',
+  BLUE: '#0000ff'
+} as const;
+
+type ColorValue = ValueOf<typeof Colors>; // '#ff0000' | '#00ff00' | '#0000ff'
+
+function setColor(color: ColorValue) {
+  console.log(`Setting color to: ${color}`);
+}
+
+setColor(Colors.RED); // ✅ Valid
+setColor('#ffffff'); // ❌ TypeScript error
+
+// With status object
+const Status = {
+  PENDING: 'pending',
+  SUCCESS: 'success',
+  ERROR: 'error'
+} as const;
+
+type StatusValue = ValueOf<typeof Status>; // 'pending' | 'success' | 'error'
+```
+
+#### `DeepPartial<T>`
+Makes all properties of a type optional recursively (nested objects too).
+
+```tsx
+import { DeepPartial } from 'reactilities';
+
+type User = {
+  id: string;
+  profile: {
+    name: string;
+    email: string;
+    preferences: {
+      theme: 'light' | 'dark';
+      notifications: boolean;
+    };
+  };
+};
+
+function updateUser(userId: string, updates: DeepPartial<User>) {
+  return { ...getUser(userId), ...updates };
+}
+
+// Valid partial updates
+updateUser('123', { profile: { name: 'John' } });
+updateUser('123', { profile: { preferences: { theme: 'dark' } } });
+updateUser('123', { id: '456', profile: { email: 'new@email.com' } });
+```
+
+#### `VoidFunction<T>`
+Type for functions that return void with typed parameters.
+
+```tsx
+import { VoidFunction } from 'reactilities';
+
+// Event handler
+type ClickHandler = VoidFunction<[MouseEvent]>;
+
+const handleClick: ClickHandler = (event) => {
+  console.log('Clicked at:', event.clientX, event.clientY);
+};
+
+// Multiple parameters
+type UpdateUserHandler = VoidFunction<[userId: string, data: UserData]>;
+
+const updateUser: UpdateUserHandler = (userId, data) => {
+  database.users.update(userId, data);
+};
+
+// React component props
+interface ButtonProps {
+  onClick: VoidFunction<[event: React.MouseEvent]>;
+  onHover: VoidFunction<[]>;
+  onSubmit: VoidFunction<[formData: FormData]>;
+}
 ```
 
 ## 🔧 TypeScript Support
@@ -478,7 +898,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### v0.1.0
 - Initial release
-- **DOM hooks:** `useDocumentTitle`, `useEventListener`, `useFavicon`, `useLockBodyScroll`, `useMediaQuery`
-- **State hooks:** `useLocalStorage`, `useSessionStorage`, `useCopyToClipboard`  
+- **DOM hooks:** `useDocumentTitle`, `useEventListener`, `useFavicon`, `useLockBodyScroll`, `useMediaQuery`, `useClickOutside`
+- **State hooks:** `useLocalStorage`, `useSessionStorage`, `useCopyToClipboard`, `useToggle`, `useObjectState`
 - **Utility hooks:** `useDebounce`, `useThrottle`, `useNetworkState`, `useGeolocation`, `useIntersectionObserver`, `useKeyboardShortcuts`, `useWebSocket`, `useVirtualization`
-- **Helper functions:** `classnames`
+- **Lifecycle hooks:** `componentDidMount`, `componentWillMount`, `componentDidUpdate`, `componentWillUnmount`
+- **TypeScript types:** `Nullable<T>`, `Maybe<T>`, `ValueOf<T>`, `DeepPartial<T>`, `VoidFunction<T>`
+- **Helper functions:** `classnames`, `loadScript`
