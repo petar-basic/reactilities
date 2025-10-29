@@ -150,18 +150,26 @@ describe('useLocalStorage', () => {
     expect(result.current[0]).toBe('fallback-value')
   })
 
-  it('should handle localStorage errors gracefully', () => {
+  it('should handle localStorage errors on initialization', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    localStorageMock.setItem.mockImplementation(() => {
-      throw new Error('localStorage error')
+    
+    // Mock setItem to throw error
+    localStorageMock.setItem.mockImplementationOnce(() => {
+      throw new Error('localStorage is not available')
     })
     
-    // Should not throw error during initialization
-    expect(() => {
-      renderHook(() => useLocalStorage('test-key', 'initial-value'))
-    }).not.toThrow()
+    // Should not crash during initialization
+    const { result } = renderHook(() => useLocalStorage('test-key', 'initial-value'))
     
-    expect(consoleWarnSpy).toHaveBeenCalled()
+    // Should still return initial value
+    expect(result.current[0]).toBe('initial-value')
+    
+    // Should log warning
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Error initializing localStorage:',
+      expect.any(Error)
+    )
+    
     consoleWarnSpy.mockRestore()
   })
 
@@ -173,6 +181,29 @@ describe('useLocalStorage', () => {
     })
     
     expect(localStorageMock.setItem).toHaveBeenCalledWith('test-key', JSON.stringify('new-value'))
+  })
+
+  it('should handle errors when setting value', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { result } = renderHook(() => useLocalStorage('test-key', 'initial-value'))
+    
+    // Mock setItem to throw error on next call
+    localStorageMock.setItem.mockImplementationOnce(() => {
+      throw new Error('localStorage quota exceeded')
+    })
+    
+    // Should not crash when trying to set value
+    act(() => {
+      result.current[1]('new-value')
+    })
+    
+    // Should log warning
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Error setting localStorage:',
+      expect.any(Error)
+    )
+    
+    consoleWarnSpy.mockRestore()
   })
 
   it('should dispatch storage event when item is removed', () => {

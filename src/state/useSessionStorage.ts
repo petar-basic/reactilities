@@ -89,17 +89,30 @@ export function useSessionStorage(key: string, initialValue: string): any[] {
           setItem(key, nextState);
         }
       } catch (e) {
-        console.warn(e);
+        console.warn('Error setting sessionStorage:', e);
       }
     },
     [key, store]
   );
 
   useEffect(() => {
-    if (getItem(key) === null && typeof initialValue !== "undefined") {
-      setItem(key, initialValue);
+    try {
+      if (getItem(key) === null && typeof initialValue !== "undefined") {
+        setItem(key, initialValue);
+      }
+    } catch (e) {
+      console.warn('Error initializing sessionStorage:', e);
     }
   }, [key, initialValue]);
 
-  return [store ? JSON.parse(store) : initialValue, setState];
+  const parsedValue = (() => {
+    if (!store) return initialValue;
+    try {
+      return JSON.parse(store);
+    } catch {
+      return initialValue;
+    }
+  })();
+
+  return [parsedValue, setState];
 }

@@ -88,7 +88,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
           setItem(key, nextState);
         }
       } catch (e) {
-        console.warn(e);
+        console.warn('Error setting localStorage:', e);
       }
     },
     [key, store]
@@ -100,7 +100,7 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         setItem(key, initialValue);
       }
     } catch (e) {
-      console.warn(e);
+      console.warn('Error initializing localStorage:', e);
     }
   }, [key, initialValue]);
 
