@@ -16,6 +16,13 @@ yarn add reactilities
 pnpm add reactilities
 ```
 
+### Requirements
+
+- **React** >= 18.0.0
+- **React DOM** >= 18.0.0
+
+> **Note:** This library uses `useSyncExternalStore` which requires React 18 or higher.
+
 ## 🎯 Features
 
 - 🪝 **25+ React Hooks** - DOM manipulation, state management, and utility hooks
