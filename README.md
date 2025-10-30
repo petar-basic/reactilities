@@ -4,7 +4,7 @@ A comprehensive collection of useful React hooks and utilities for modern web de
 
 [![npm version](https://badge.fury.io/js/reactilities.svg)](https://badge.fury.io/js/reactilities)
 [![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](http://www.typescriptlang.org/)
-[![Test Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen.svg)](https://github.com/petarbasic/reactilities)
+[![Test Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen.svg)](https://github.com/petar-basic/reactilities)
 
 ## 📦 Installation
 

@@ -18,11 +18,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/petarbasic/reactilities.git"
+    "url": "https://github.com/petar-basic/reactilities.git"
   },
-  "homepage": "https://github.com/petarbasic/reactilities#readme",
+  "homepage": "https://github.com/petar-basic/reactilities#readme",
   "bugs": {
-    "url": "https://github.com/petarbasic/reactilities/issues"
+    "url": "https://github.com/petar-basic/reactilities/issues"
   },
   "type": "module",
   "files": [
