@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 
 interface UseVirtualizationOptions {
   itemHeight: number;
@@ -15,6 +15,7 @@ interface VirtualItem {
 }
 
 interface UseVirtualizationReturn {
+  containerRef: RefObject<HTMLElement | null>;
   virtualItems: VirtualItem[];
   totalSize: number;
   scrollToIndex: (index: number) => void;
@@ -24,20 +25,20 @@ interface UseVirtualizationReturn {
 /**
  * Hook for virtualizing large lists to improve performance
  * Only renders visible items plus overscan buffer
- * 
+ *
  * @param itemCount - Total number of items in the list
  * @param options - Virtualization configuration options
- * @returns Object with virtual items, total size, and scroll utilities
- * 
+ * @returns Object with containerRef, virtual items, total size, and scroll utilities
+ *
  * @example
- * const { virtualItems, totalSize, scrollToIndex } = useVirtualization(10000, {
+ * const { containerRef, virtualItems, totalSize, scrollToIndex } = useVirtualization(10000, {
  *   itemHeight: 50,
  *   containerHeight: 400,
  *   overscan: 5
  * });
- * 
+ *
  * return (
- *   <div style={{ height: containerHeight, overflow: 'auto' }}>
+ *   <div ref={containerRef} style={{ height: containerHeight, overflow: 'auto' }}>
  *     <div style={{ height: totalSize, position: 'relative' }}>
  *       {virtualItems.map(item => (
  *         <div
@@ -60,13 +61,14 @@ export function useVirtualization(
   itemCount: number,
   options: UseVirtualizationOptions
 ): UseVirtualizationReturn {
-  const { 
-    itemHeight, 
-    containerHeight, 
-    overscan = 5, 
-    scrollingDelay = 150 
+  const {
+    itemHeight,
+    containerHeight,
+    overscan = 5,
+    scrollingDelay = 150
   } = options;
 
+  const containerRef = useRef<HTMLElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
 
@@ -92,19 +94,17 @@ export function useVirtualization(
     return items;
   }, [scrollTop, itemHeight, containerHeight, overscan, itemCount]);
 
-  const scrollToIndex = (index: number) => {
+  const scrollToIndex = useCallback((index: number) => {
     const targetScrollTop = index * itemHeight;
     setScrollTop(targetScrollTop);
-    
-    // Scroll the actual container if it exists
-    const container = document.querySelector('[data-virtualized-container]') as HTMLElement;
-    if (container) {
-      container.scrollTop = targetScrollTop;
+
+    if (containerRef.current) {
+      containerRef.current.scrollTop = targetScrollTop;
     }
-  };
+  }, [itemHeight]);
 
   useEffect(() => {
-    let timeoutId: number;
+    let timeoutId: ReturnType<typeof setTimeout>;
 
     const handleScroll = (event: Event) => {
       const target = event.target as HTMLElement;
@@ -112,15 +112,15 @@ export function useVirtualization(
       setIsScrolling(true);
 
       clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(() => {
+      timeoutId = setTimeout(() => {
         setIsScrolling(false);
       }, scrollingDelay);
     };
 
-    const container = document.querySelector('[data-virtualized-container]');
+    const container = containerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll, { passive: true });
-      
+
       return () => {
         container.removeEventListener('scroll', handleScroll);
         clearTimeout(timeoutId);
@@ -129,6 +129,7 @@ export function useVirtualization(
   }, [scrollingDelay]);
 
   return {
+    containerRef,
     virtualItems,
     totalSize,
     scrollToIndex,

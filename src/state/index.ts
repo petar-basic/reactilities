@@ -8,3 +8,4 @@ export * from './usePrevious';
 export * from './useList';
 export * from './useSet';
 export * from './useMap';
+export * from './useUndoRedo';

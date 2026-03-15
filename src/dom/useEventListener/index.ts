@@ -1,41 +1,53 @@
-import { useEffectEvent, useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 /**
  * Hook for adding event listeners to DOM elements with automatic cleanup
  * Handles both ref objects and direct element references safely
- * 
+ * Handler updates are applied without re-registering the listener
+ *
  * @param target - RefObject pointing to the target HTML element
  * @param eventName - Name of the event to listen for (e.g., 'click', 'scroll')
  * @param handler - Event handler function to execute when event fires
  * @param options - Optional event listener options (capture, passive, once, etc.)
- * 
+ *
  * @example
  * const buttonRef = useRef<HTMLButtonElement>(null);
- * 
+ *
  * useEventListener(buttonRef, 'click', (event) => {
  *   console.log('Button clicked!', event);
  * });
- * 
+ *
+ * @example
  * // With options
  * useEventListener(scrollRef, 'scroll', handleScroll, { passive: true });
+ *
+ * @example
+ * // Always use a stable options reference (useMemo or module-level const)
+ * // to avoid re-registering the listener on every render
+ * const options = useMemo(() => ({ passive: true }), []);
+ * useEventListener(ref, 'scroll', handleScroll, options);
  */
 export function useEventListener(
-  target: RefObject<HTMLElement>, 
-  eventName: string, 
-  handler: (event: Event) => void, 
+  target: RefObject<HTMLElement | null>,
+  eventName: string,
+  handler: (event: Event) => void,
   options?: AddEventListenerOptions
 ): void {
-  const onEvent = useEffectEvent(handler);
+  const handlerRef = useRef(handler);
+
+  // Keep handlerRef current on every render so the listener always calls
+  // the latest handler without needing to re-register
+  useEffect(() => {
+    handlerRef.current = handler;
+  });
 
   useEffect(() => {
-    const targetElement = target.current ?? target;
+    const el = target?.current ?? (target as unknown as HTMLElement);
+    if (!el?.addEventListener) return;
 
-    if (!targetElement?.addEventListener) return;
+    const listener = (event: Event) => handlerRef.current(event);
+    el.addEventListener(eventName, listener, options);
 
-    targetElement.addEventListener(eventName, onEvent, options);
-
-    return () => {
-      targetElement.removeEventListener(eventName, onEvent, options);
-    };
-  }, [target, eventName, options, onEvent]);
+    return () => el.removeEventListener(eventName, listener, options);
+  }, [target, eventName, options]);
 }
