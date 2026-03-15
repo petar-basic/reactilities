@@ -38,12 +38,12 @@ export function useThrottle<T>(value: T, interval = 500): T {
       lastUpdated.current = now;
       setThrottledValue(value);
     } else {
-      const id = window.setTimeout(() => {
+      const id = setTimeout(() => {
         lastUpdated.current = now;
         setThrottledValue(value);
       }, interval);
 
-      return () => window.clearTimeout(id);
+      return () => clearTimeout(id);
     }
   }, [value, interval]);
 

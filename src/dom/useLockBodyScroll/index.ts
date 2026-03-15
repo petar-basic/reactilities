@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useIsomorphicLayoutEffect } from '../../lifecycles/useIsomorphicLayoutEffect';
 
 /**
  * Hook for preventing body scroll while component is mounted
@@ -29,7 +29,7 @@ import { useLayoutEffect } from "react";
  * }
  */
 export function useLockBodyScroll(): void {
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
     document.body.style.overflow = "hidden";
     return () => {

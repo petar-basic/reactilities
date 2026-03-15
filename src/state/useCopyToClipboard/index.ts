@@ -61,7 +61,7 @@ export function useCopyToClipboard(): [string | null, (value: string) => void] {
         } else {
           throw new Error("writeText not supported");
         }
-      } catch (e) {
+      } catch {
         oldSchoolCopy(value);
         setState(value);
       }

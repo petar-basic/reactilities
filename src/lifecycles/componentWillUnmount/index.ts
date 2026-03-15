@@ -33,9 +33,6 @@ import { useEffect } from "react";
  * });
  */
 export function componentWillUnmount<T>(func: () => T): void {
-  useEffect(() => {
-    return () => {
-      func();
-    };
-  }, []);
+  // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
+  useEffect(() => { return () => { func(); }; }, []);
 }

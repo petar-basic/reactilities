@@ -3,3 +3,8 @@ export * from './useSessionStorage';
 export * from './useCopyToClipboard';
 export * from './useToggle';
 export * from './useObjectState';
+export * from './useCookie';
+export * from './usePrevious';
+export * from './useList';
+export * from './useSet';
+export * from './useMap';

@@ -24,7 +24,6 @@ import { useEffect } from "react";
  * });
  */
 export function componentDidMount<T>(func: () => T): void {
-    useEffect(() => {
-        func()
-    }, []);
+    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
+    useEffect(() => { func() }, []);
 }

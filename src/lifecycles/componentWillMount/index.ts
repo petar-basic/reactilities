@@ -26,7 +26,6 @@ import { useLayoutEffect } from "react";
  * });
  */
 export function componentWillMount<T>(func: () => T): void {
-    useLayoutEffect(() => {
-        func()
-    }, []);
+    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
+    useLayoutEffect(() => { func() }, []);
 }

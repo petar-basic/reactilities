@@ -4,3 +4,7 @@ export * from './useDocumentTitle';
 export * from './useEventListener';
 export * from './useFavicon';
 export * from './useClickOutside';
+export * from './useWindowSize';
+export * from './useScrollPosition';
+export * from './useHover';
+export * from './useResizeObserver';

@@ -68,4 +68,4 @@
  * log('Hello'); // Uses default 'info'
  * log('Warning!', 'warn');
  */
-export type VoidFunction<T extends any[] = any[]> = (...args: T) => void;
+export type VoidFunction<T extends unknown[] = unknown[]> = (...args: T) => void;

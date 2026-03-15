@@ -27,7 +27,6 @@ import { useEffect } from "react";
  * });
  */
 export function componentDidUpdate<T>(func: () => T): void {
-    useEffect(() => {
-        func()
-    });
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => { func() });
 }

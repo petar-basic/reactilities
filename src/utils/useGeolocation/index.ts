@@ -62,6 +62,11 @@ export function useGeolocation(options: PositionOptions = {}): GeolocationState 
   const optionsRef = useRef(options);
 
   useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setState(s => ({ ...s, loading: false, error: { code: 2, message: 'Geolocation is not supported', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError }));
+      return;
+    }
+
     const onEvent = ({ coords, timestamp }: GeolocationPosition) => {
       setState({
         loading: false,

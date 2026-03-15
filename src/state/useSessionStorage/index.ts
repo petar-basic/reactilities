@@ -4,7 +4,7 @@ const dispatchStorageEvent = (key: string, newValue: string | null) => {
   window.dispatchEvent(new StorageEvent("storage", { key, newValue }));
 };
 
-const setItem = (key: string, value: string) => {
+const setItem = <T>(key: string, value: T) => {
   const stringifiedValue = JSON.stringify(value);
   window.sessionStorage.setItem(key, stringifiedValue);
   dispatchStorageEvent(key, stringifiedValue);
@@ -69,7 +69,7 @@ const getServerSnapshot = () => {
  * // Temporary UI state
  * const [sidebarOpen, setSidebarOpen] = useSessionStorage('sidebarOpen', false);
  */
-export function useSessionStorage(key: string, initialValue: string): any[] {
+export function useSessionStorage<T>(key: string, initialValue: T): [T, (value: T | ((prevValue: T) => T) | null | undefined) => void] {
   const getSnapshot = () => getItem(key);
 
   const store = useSyncExternalStore(
@@ -79,9 +79,11 @@ export function useSessionStorage(key: string, initialValue: string): any[] {
   );
 
   const setState = useCallback(
-    (valueOrFn: string | ((prevValue: string) => string)) => {
+    (valueOrFn: T | ((prevValue: T) => T) | null | undefined) => {
       try {
-        const nextState = typeof valueOrFn === "function" ? valueOrFn(JSON.parse(store || '')) : valueOrFn;
+        const nextState = typeof valueOrFn === "function"
+          ? (valueOrFn as (prevValue: T) => T)(JSON.parse(store || ''))
+          : valueOrFn;
 
         if (nextState === undefined || nextState === null) {
           removeItem(key);

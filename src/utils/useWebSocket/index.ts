@@ -15,9 +15,9 @@ interface UseWebSocketOptions {
 
 interface UseWebSocketReturn {
   sendMessage: (message: string | ArrayBuffer | Blob) => void;
-  sendJsonMessage: (message: any) => void;
+  sendJsonMessage: (message: unknown) => void;
   lastMessage: MessageEvent | null;
-  lastJsonMessage: any;
+  lastJsonMessage: unknown;
   readyState: ReadyState;
   getWebSocket: () => WebSocket | null;
 }
@@ -50,7 +50,7 @@ export function useWebSocket(
     protocols,
     reconnectAttempts = 3,
     reconnectInterval = 3000,
-    shouldReconnect = (_closeEvent: CloseEvent) => true,
+    shouldReconnect = (() => true) as (closeEvent: CloseEvent) => boolean,
     onOpen,
     onClose,
     onError,
@@ -61,9 +61,9 @@ export function useWebSocket(
   const [readyState, setReadyState] = useState<ReadyState>(0);
   
   const webSocketRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number | undefined>(undefined);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const reconnectAttemptsRef = useRef(0);
-  const lastJsonMessageRef = useRef<any>(null);
+  const lastJsonMessageRef = useRef<unknown>(null);
 
   const getWebSocket = useCallback(() => webSocketRef.current, []);
 
@@ -76,7 +76,7 @@ export function useWebSocket(
     }
   }, []);
 
-  const sendJsonMessage = useCallback((message: any) => {
+  const sendJsonMessage = useCallback((message: unknown) => {
     sendMessage(JSON.stringify(message));
   }, [sendMessage]);
 
@@ -103,7 +103,7 @@ export function useWebSocket(
           reconnectAttemptsRef.current < reconnectAttempts
         ) {
           reconnectAttemptsRef.current++;
-          reconnectTimeoutRef.current = window.setTimeout(() => {
+          reconnectTimeoutRef.current = setTimeout(() => {
             connectWebSocket();
           }, reconnectInterval);
         }
