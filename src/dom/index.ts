@@ -8,3 +8,4 @@ export * from './useWindowSize';
 export * from './useScrollPosition';
 export * from './useHover';
 export * from './useResizeObserver';
+export * from './useFocusTrap';

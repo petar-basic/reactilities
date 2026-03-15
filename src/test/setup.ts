@@ -40,6 +40,14 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// Mock navigator.permissions
+Object.defineProperty(navigator, 'permissions', {
+  value: {
+    query: vi.fn(),
+  },
+  writable: true,
+})
+
 // Mock navigator.clipboard
 Object.defineProperty(navigator, 'clipboard', {
   value: {

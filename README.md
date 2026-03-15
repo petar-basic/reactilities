@@ -25,12 +25,12 @@ pnpm add reactilities
 
 ## Features
 
-- **40+ React Hooks** — DOM manipulation, state management, async, timers, and more
+- **45+ React Hooks** — DOM manipulation, state management, async, timers, and more
 - **Lifecycle Helpers** — class component lifecycle methods as hooks
 - **Helper Functions** — utility functions for common tasks
 - **TypeScript Types** — utility types for better type safety
 - **TypeScript First** — full type support with excellent IntelliSense
-- **Well Tested** — 99%+ test coverage with 253 tests
+- **Well Tested** — 99%+ test coverage with 363 tests
 - **Tree Shakable** — import only what you need
 - **Zero Dependencies** — no external dependencies except React
 - **SSR Safe** — all hooks guard against server-side rendering issues
@@ -48,6 +48,7 @@ Hooks for DOM manipulation and browser APIs.
 - **[useDocumentTitle](./src/dom/useDocumentTitle/README.md)** - Dynamically update the document title
 - **[useEventListener](./src/dom/useEventListener/README.md)** - Add event listeners with automatic cleanup
 - **[useFavicon](./src/dom/useFavicon/README.md)** - Dynamically update the website favicon
+- **[useFocusTrap](./src/dom/useFocusTrap/README.md)** - Trap keyboard focus within a container (modals, drawers)
 - **[useHover](./src/dom/useHover/README.md)** - Detect hover state on any element
 - **[useLockBodyScroll](./src/dom/useLockBodyScroll/README.md)** - Prevent body scrolling (for modals/overlays)
 - **[useMediaQuery](./src/dom/useMediaQuery/README.md)** - Responsive design with CSS media queries
@@ -69,6 +70,7 @@ Hooks for state management and persistence.
 - **[useSessionStorage](./src/state/useSessionStorage/README.md)** - Persist state in sessionStorage
 - **[useSet](./src/state/useSet/README.md)** - Manage Set state with React integration
 - **[useToggle](./src/state/useToggle/README.md)** - Toggle boolean state with flexible API
+- **[useUndoRedo](./src/state/useUndoRedo/README.md)** - State with full undo/redo history
 
 ### Utility Hooks
 
@@ -79,11 +81,13 @@ Performance and utility hooks for common patterns.
 - **[useDebounce](./src/utils/useDebounce/README.md)** - Debounce rapidly changing values
 - **[useFetch](./src/utils/useFetch/README.md)** - Data fetching with automatic abort support
 - **[useGeolocation](./src/utils/useGeolocation/README.md)** - Access user's geolocation
+- **[useInfiniteScroll](./src/utils/useInfiniteScroll/README.md)** - Infinite scroll via IntersectionObserver
 - **[useIntersectionObserver](./src/utils/useIntersectionObserver/README.md)** - Detect element visibility (lazy loading, infinite scroll)
 - **[useInterval](./src/utils/useInterval/README.md)** - Run a callback on a fixed interval
 - **[useKeyboardShortcuts](./src/utils/useKeyboardShortcuts/README.md)** - Handle keyboard shortcuts
 - **[useManualUpdate](./src/utils/useManualUpdate/README.md)** - Manually trigger a component re-render
 - **[useNetworkState](./src/utils/useNetworkState/README.md)** - Monitor network connectivity
+- **[usePermission](./src/utils/usePermission/README.md)** - Query browser permission status reactively
 - **[useThrottle](./src/utils/useThrottle/README.md)** - Throttle rapidly changing values
 - **[useTimeout](./src/utils/useTimeout/README.md)** - Run a callback after a delay with reset/clear
 - **[useVirtualization](./src/utils/useVirtualization/README.md)** - Virtualize large lists for performance
@@ -124,6 +128,8 @@ import {
   useDebounce,
   useWindowSize,
   useFetch,
+  useUndoRedo,
+  useInfiniteScroll,
   classnames
 } from 'reactilities';
 
@@ -193,7 +199,7 @@ type PartialUser = DeepPartial<User>;   // All properties optional recursively
 ## Testing
 
 Reactilities comes with comprehensive tests:
-- **253 tests** covering all functionality
+- **363 tests** covering all functionality
 - **99%+ code coverage**
 - Tested with Vitest and React Testing Library
 
@@ -206,6 +212,13 @@ MIT © [Petar Basic](https://github.com/petar-basic)
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
+
+### v0.3.0
+- Added 4 new hooks: `useUndoRedo`, `usePermission`, `useFocusTrap`, `useInfiniteScroll`
+- Refactored `useVirtualization` — replaced brittle `data-` attribute selector with returned `containerRef` API (breaking change)
+- Fixed `useEventListener` — replaced experimental `useEffectEvent` with stable `useRef` handler pattern
+- Fixed `useWebSocket` — resolved infinite re-render loop caused by unstable default `shouldReconnect` reference
+- 363 tests, 99%+ coverage
 
 ### v0.2.0
 - Added 15 new hooks: `useAsync`, `useFetch`, `useInterval`, `useTimeout`, `useCountdown`, `useWindowSize`, `useScrollPosition`, `useHover`, `useResizeObserver`, `usePrevious`, `useList`, `useSet`, `useMap`, `useCookie`, `useIsomorphicLayoutEffect`
@@ -237,6 +250,16 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### v0.1.0
 - Initial release
+
+---
+
+## Support
+
+If you find this library useful and are feeling generous, consider donating to **Svratište** — a day center in Belgrade providing support, meals, and shelter for people experiencing homelessness.
+
+[![Facebook](https://img.shields.io/badge/Facebook-svratistebgd-1877F2?style=flat&logo=facebook&logoColor=white)](https://www.facebook.com/svratistebgd/?locale=sr_RS)
+[![Instagram](https://img.shields.io/badge/Instagram-svratistebgd-E4405F?style=flat&logo=instagram&logoColor=white)](https://www.instagram.com/svratistebgd/)
+[![Donate](https://img.shields.io/badge/Donate-cim.org.rs-FF6B35?style=flat&logo=heart&logoColor=white)](https://cim.org.rs/donacije/donacija/)
 
 ---
 

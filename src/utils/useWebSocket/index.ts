@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 type ReadyState = 0 | 1 | 2 | 3; // CONNECTING | OPEN | CLOSING | CLOSED
 
+// Stable default — defined at module level so it never changes reference
+const DEFAULT_SHOULD_RECONNECT: (closeEvent: CloseEvent) => boolean = () => true;
+
 interface UseWebSocketOptions {
   protocols?: string | string[];
   reconnectAttempts?: number;
@@ -50,7 +53,7 @@ export function useWebSocket(
     protocols,
     reconnectAttempts = 3,
     reconnectInterval = 3000,
-    shouldReconnect = (() => true) as (closeEvent: CloseEvent) => boolean,
+    shouldReconnect = DEFAULT_SHOULD_RECONNECT,
     onOpen,
     onClose,
     onError,
