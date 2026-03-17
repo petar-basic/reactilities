@@ -13,3 +13,4 @@ export * from './useFetch';
 export * from './useCountdown';
 export * from './usePermission';
 export * from './useInfiniteScroll';
+export * from './useIsMounted';

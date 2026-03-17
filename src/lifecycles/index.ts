@@ -3,3 +3,4 @@ export * from './componentWillMount';
 export * from './componentDidUpdate';
 export * from './componentWillUnmount';
 export * from './useIsomorphicLayoutEffect';
+export * from './useUpdateEffect';

@@ -25,12 +25,12 @@ pnpm add reactilities
 
 ## Features
 
-- **45+ React Hooks** — DOM manipulation, state management, async, timers, and more
+- **51+ React Hooks** — DOM manipulation, state management, async, timers, and more
 - **Lifecycle Helpers** — class component lifecycle methods as hooks
 - **Helper Functions** — utility functions for common tasks
 - **TypeScript Types** — utility types for better type safety
 - **TypeScript First** — full type support with excellent IntelliSense
-- **Well Tested** — 99%+ test coverage with 363 tests
+- **Well Tested** — 99%+ test coverage with 421 tests
 - **Tree Shakable** — import only what you need
 - **Zero Dependencies** — no external dependencies except React
 - **SSR Safe** — all hooks guard against server-side rendering issues
@@ -45,13 +45,18 @@ Each hook and utility has its own detailed documentation with examples. Click on
 Hooks for DOM manipulation and browser APIs.
 
 - **[useClickOutside](./src/dom/useClickOutside/README.md)** - Detect clicks outside an element
+- **[useDarkMode](./src/dom/useDarkMode/README.md)** - Dark mode with system preference detection and persistence
 - **[useDocumentTitle](./src/dom/useDocumentTitle/README.md)** - Dynamically update the document title
 - **[useEventListener](./src/dom/useEventListener/README.md)** - Add event listeners with automatic cleanup
 - **[useFavicon](./src/dom/useFavicon/README.md)** - Dynamically update the website favicon
 - **[useFocusTrap](./src/dom/useFocusTrap/README.md)** - Trap keyboard focus within a container (modals, drawers)
+- **[useFullscreen](./src/dom/useFullscreen/README.md)** - Enter, exit, and track fullscreen state on any element
 - **[useHover](./src/dom/useHover/README.md)** - Detect hover state on any element
 - **[useLockBodyScroll](./src/dom/useLockBodyScroll/README.md)** - Prevent body scrolling (for modals/overlays)
+- **[useLongPress](./src/dom/useLongPress/README.md)** - Detect long press / hold on any element
 - **[useMediaQuery](./src/dom/useMediaQuery/README.md)** - Responsive design with CSS media queries
+- **[useMousePosition](./src/dom/useMousePosition/README.md)** - Track real-time cursor position
+- **[usePageVisibility](./src/dom/usePageVisibility/README.md)** - Detect when browser tab is hidden or visible
 - **[useResizeObserver](./src/dom/useResizeObserver/README.md)** - Observe element size changes with ResizeObserver
 - **[useScrollPosition](./src/dom/useScrollPosition/README.md)** - Track window scroll position
 - **[useWindowSize](./src/dom/useWindowSize/README.md)** - Track browser window dimensions
@@ -71,6 +76,8 @@ Hooks for state management and persistence.
 - **[useSet](./src/state/useSet/README.md)** - Manage Set state with React integration
 - **[useToggle](./src/state/useToggle/README.md)** - Toggle boolean state with flexible API
 - **[useUndoRedo](./src/state/useUndoRedo/README.md)** - State with full undo/redo history
+- **[useBoolean](./src/state/useBoolean/README.md)** - Boolean state with named setTrue/setFalse/toggle controls
+- **[useCounter](./src/state/useCounter/README.md)** - Numeric counter with min/max bounds and step
 
 ### Utility Hooks
 
@@ -82,6 +89,7 @@ Performance and utility hooks for common patterns.
 - **[useFetch](./src/utils/useFetch/README.md)** - Data fetching with automatic abort support
 - **[useGeolocation](./src/utils/useGeolocation/README.md)** - Access user's geolocation
 - **[useInfiniteScroll](./src/utils/useInfiniteScroll/README.md)** - Infinite scroll via IntersectionObserver
+- **[useIsMounted](./src/utils/useIsMounted/README.md)** - Guard async state updates against unmounted components
 - **[useIntersectionObserver](./src/utils/useIntersectionObserver/README.md)** - Detect element visibility (lazy loading, infinite scroll)
 - **[useInterval](./src/utils/useInterval/README.md)** - Run a callback on a fixed interval
 - **[useKeyboardShortcuts](./src/utils/useKeyboardShortcuts/README.md)** - Handle keyboard shortcuts
@@ -102,6 +110,7 @@ Class component lifecycle methods as hooks.
 - **[componentWillMount](./src/lifecycles/componentWillMount/README.md)** - Run function before first render
 - **[componentWillUnmount](./src/lifecycles/componentWillUnmount/README.md)** - Run cleanup before unmount
 - **[useIsomorphicLayoutEffect](./src/lifecycles/useIsomorphicLayoutEffect/README.md)** - SSR-safe drop-in for useLayoutEffect
+- **[useUpdateEffect](./src/lifecycles/useUpdateEffect/README.md)** - useEffect that skips the first render
 
 ### Helper Functions
 
@@ -199,7 +208,7 @@ type PartialUser = DeepPartial<User>;   // All properties optional recursively
 ## Testing
 
 Reactilities comes with comprehensive tests:
-- **363 tests** covering all functionality
+- **421 tests** covering all functionality
 - **99%+ code coverage**
 - Tested with Vitest and React Testing Library
 
@@ -212,6 +221,10 @@ MIT © [Petar Basic](https://github.com/petar-basic)
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
+
+### v0.4.0
+- Added 9 new hooks: `useCounter`, `useBoolean`, `useUpdateEffect`, `useIsMounted`, `usePageVisibility`, `useMousePosition`, `useDarkMode`, `useLongPress`, `useFullscreen`
+- 421 tests, 99%+ coverage
 
 ### v0.3.0
 - Added 4 new hooks: `useUndoRedo`, `usePermission`, `useFocusTrap`, `useInfiniteScroll`
