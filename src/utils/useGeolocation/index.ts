@@ -13,14 +13,24 @@ interface GeolocationState {
   error: GeolocationPositionError | null;
 }
 
+// Satisfies GeolocationPositionError shape for environments where the
+// Geolocation API is unavailable. code 2 = POSITION_UNAVAILABLE per spec.
+const GEOLOCATION_UNSUPPORTED_ERROR: GeolocationPositionError = {
+  code: 2,
+  message: 'Geolocation is not supported by this browser',
+  PERMISSION_DENIED: 1,
+  POSITION_UNAVAILABLE: 2,
+  TIMEOUT: 3,
+};
+
 /**
  * Hook for accessing device geolocation with continuous position tracking
  * Provides current position, accuracy, and error handling
  * Uses both getCurrentPosition and watchPosition for real-time updates
- * 
+ *
  * @param options - Geolocation API options (enableHighAccuracy, timeout, maximumAge)
  * @returns GeolocationState object with position data and loading/error states
- * 
+ *
  * @example
  * function LocationTracker() {
  *   const { latitude, longitude, accuracy, loading, error } = useGeolocation({
@@ -28,10 +38,10 @@ interface GeolocationState {
  *     timeout: 10000,
  *     maximumAge: 60000
  *   });
- * 
+ *
  *   if (loading) return <div>Getting location...</div>;
  *   if (error) return <div>Error: {error.message}</div>;
- * 
+ *
  *   return (
  *     <div>
  *       <p>Latitude: {latitude}</p>
@@ -40,7 +50,7 @@ interface GeolocationState {
  *     </div>
  *   );
  * }
- * 
+ *
  * // Basic usage
  * const location = useGeolocation();
  * const isLocationAvailable = location.latitude && location.longitude;
@@ -60,10 +70,13 @@ export function useGeolocation(options: PositionOptions = {}): GeolocationState 
   });
 
   const optionsRef = useRef(options);
+  // Keep optionsRef current so changes to options take effect on the next
+  // watchPosition call without needing to re-register the effect.
+  optionsRef.current = options;
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setState(s => ({ ...s, loading: false, error: { code: 2, message: 'Geolocation is not supported', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError }));
+      setState(s => ({ ...s, loading: false, error: GEOLOCATION_UNSUPPORTED_ERROR }));
       return;
     }
 

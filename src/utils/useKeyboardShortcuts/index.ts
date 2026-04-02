@@ -115,7 +115,13 @@ export function useKeyboardShortcuts(
 /**
  * Utility function to create keyboard shortcut objects
  * Provides a more readable way to define shortcuts
- * 
+ *
+ * **Note:** `preventDefault` defaults to `true` here (unlike raw shortcut
+ * objects where it defaults to `false`). This is intentional — most named
+ * shortcuts (save, copy, undo, etc.) should prevent the browser's default
+ * action. Pass `{ preventDefault: false }` in the options argument to
+ * opt out.
+ *
  * @example
  * const shortcuts = [
  *   createShortcut('s', { ctrl: true }, handleSave),

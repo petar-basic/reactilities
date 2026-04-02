@@ -1,45 +1,46 @@
 
 import { useCallback, useState } from "react";
 
-function oldSchoolCopy(text: string) {
+function oldSchoolCopy(text: string): boolean {
   const tempTextArea = document.createElement("textarea");
   tempTextArea.value = text;
   document.body.appendChild(tempTextArea);
   tempTextArea.select();
-  document.execCommand("copy");
+  const success = document.execCommand("copy");
   document.body.removeChild(tempTextArea);
+  return success;
 }
 
 /**
  * Hook for copying text to clipboard with fallback support
  * Uses modern Clipboard API when available, falls back to legacy method
  * Tracks the last copied value for UI feedback
- * 
+ *
  * @returns Array containing [copiedValue, copyFunction]
- * 
+ *
  * @example
  * function CopyButton({ text }) {
  *   const [copiedValue, copyToClipboard] = useCopyToClipboard();
  *   const isCopied = copiedValue === text;
- * 
+ *
  *   return (
  *     <button onClick={() => copyToClipboard(text)}>
  *       {isCopied ? 'Copied!' : 'Copy'}
  *     </button>
  *   );
  * }
- * 
+ *
  * // Advanced usage with feedback
  * function ShareLink({ url }) {
  *   const [copiedValue, copyToClipboard] = useCopyToClipboard();
  *   const [showFeedback, setShowFeedback] = useState(false);
- * 
+ *
  *   const handleCopy = async () => {
  *     await copyToClipboard(url);
  *     setShowFeedback(true);
  *     setTimeout(() => setShowFeedback(false), 2000);
  *   };
- * 
+ *
  *   return (
  *     <div>
  *       <input value={url} readOnly />
@@ -62,8 +63,10 @@ export function useCopyToClipboard(): [string | null, (value: string) => void] {
           throw new Error("writeText not supported");
         }
       } catch {
-        oldSchoolCopy(value);
-        setState(value);
+        // execCommand is deprecated but kept as a fallback for older browsers.
+        // Only update state when the copy actually succeeded.
+        const success = oldSchoolCopy(value);
+        if (success) setState(value);
       }
     }
 

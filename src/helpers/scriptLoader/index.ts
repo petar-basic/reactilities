@@ -11,11 +11,11 @@ interface LoadScriptProps {
 /**
  * Dynamically loads and executes JavaScript code by creating a script element
  * Useful for loading analytics, tracking scripts, or third-party libraries
- * 
+ *
  * @param config - Configuration object containing script properties and inline code
  * @param config.scriptProps - HTML attributes to set on the script element (e.g., async, defer, type)
  * @param config.inlineScript - JavaScript code to execute inline
- * 
+ *
  * @example
  * // Load Google Tag Manager
  * const GOOGLE_TAG_MANAGER = {
@@ -33,20 +33,20 @@ interface LoadScriptProps {
  *     })(window, document, 'script', 'dataLayer', 'GTM-KEY');
  *   `,
  * };
- * 
+ *
  * // Load before React app initialization
  * const root = ReactDOM.createRoot(
  *   document.getElementById('root') as HTMLElement
  * );
- * 
+ *
  * loadScript(GOOGLE_TAG_MANAGER);
- * 
+ *
  * root.render(
  *   <StrictMode>
  *     <RouterProvider router={router} />
  *   </StrictMode>
  * );
- * 
+ *
  * @example
  * // Load external script with attributes
  * loadScript({
@@ -57,7 +57,7 @@ interface LoadScriptProps {
  *   },
  *   inlineScript: ''
  * });
- * 
+ *
  * @example
  * // Load inline analytics code
  * loadScript({
@@ -72,12 +72,24 @@ export const loadScript = ({
   scriptProps,
   inlineScript
 }: LoadScriptProps): void => {
-  const script = document.createElement('script') as HTMLScriptElement;
+  const script = document.createElement('script');
 
+  // Boolean IDL attributes (async, defer, noModule) must be handled with care:
+  // setAttribute cannot remove an attribute, so setting async: false would still
+  // make the script async because the attribute is present regardless of its value.
+  // Use removeAttribute for false booleans; setAttribute for everything else.
   for (const [key, value] of Object.entries(scriptProps)) {
-    script.setAttribute(key, value as string);
+    if (typeof value === 'boolean') {
+      if (value) {
+        script.setAttribute(key, String(value));
+      } else {
+        script.removeAttribute(key);
+      }
+    } else if (value !== undefined && value !== null) {
+      script.setAttribute(key, String(value));
+    }
   }
   script.text = inlineScript;
-  
+
   document.getElementsByTagName('head')[0].appendChild(script);
 };

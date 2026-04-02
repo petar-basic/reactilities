@@ -28,11 +28,11 @@ interface UseWebSocketReturn {
 /**
  * Hook for managing WebSocket connections with automatic reconnection
  * Handles connection state, message sending, and reconnection logic
- * 
+ *
  * @param socketUrl - WebSocket URL to connect to
  * @param options - Configuration options for WebSocket behavior
  * @returns Object with message sending functions, connection state, and utilities
- * 
+ *
  * @example
  * const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket('ws://localhost:8080', {
  *   reconnectAttempts: 3,
@@ -40,7 +40,7 @@ interface UseWebSocketReturn {
  *   onOpen: () => console.log('Connected'),
  *   onMessage: (event) => console.log('Message:', event.data)
  * });
- * 
+ *
  * const handleSendMessage = () => {
  *   sendJsonMessage({ type: 'chat', message: 'Hello!' });
  * };
@@ -62,11 +62,26 @@ export function useWebSocket(
 
   const [lastMessage, setLastMessage] = useState<MessageEvent | null>(null);
   const [readyState, setReadyState] = useState<ReadyState>(0);
-  
+
   const webSocketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const reconnectAttemptsRef = useRef(0);
   const lastJsonMessageRef = useRef<unknown>(null);
+
+  // Store callbacks in refs so connectWebSocket doesn't need to depend on them.
+  // Without this, inline callback props (e.g. onMessage={() => ...}) would cause
+  // connectWebSocket to be recreated on every render, which reconnects the socket.
+  const onOpenRef = useRef(onOpen);
+  const onCloseRef = useRef(onClose);
+  const onErrorRef = useRef(onError);
+  const onMessageRef = useRef(onMessage);
+  const shouldReconnectRef = useRef(shouldReconnect);
+
+  onOpenRef.current = onOpen;
+  onCloseRef.current = onClose;
+  onErrorRef.current = onError;
+  onMessageRef.current = onMessage;
+  shouldReconnectRef.current = shouldReconnect;
 
   const getWebSocket = useCallback(() => webSocketRef.current, []);
 
@@ -93,16 +108,16 @@ export function useWebSocket(
       socket.onopen = (event) => {
         setReadyState(WebSocket.OPEN);
         reconnectAttemptsRef.current = 0;
-        onOpen?.(event);
+        onOpenRef.current?.(event);
       };
 
       socket.onclose = (event) => {
         setReadyState(WebSocket.CLOSED);
-        onClose?.(event);
+        onCloseRef.current?.(event);
 
         // Attempt reconnection if conditions are met
         if (
-          shouldReconnect(event) &&
+          shouldReconnectRef.current(event) &&
           reconnectAttemptsRef.current < reconnectAttempts
         ) {
           reconnectAttemptsRef.current++;
@@ -114,12 +129,12 @@ export function useWebSocket(
 
       socket.onerror = (event) => {
         setReadyState(WebSocket.CLOSED);
-        onError?.(event);
+        onErrorRef.current?.(event);
       };
 
       socket.onmessage = (event) => {
         setLastMessage(event);
-        onMessage?.(event);
+        onMessageRef.current?.(event);
 
         // Try to parse JSON messages
         try {
@@ -135,7 +150,7 @@ export function useWebSocket(
       console.error('Failed to create WebSocket connection:', error);
       setReadyState(WebSocket.CLOSED);
     }
-  }, [socketUrl, protocols, reconnectAttempts, reconnectInterval, shouldReconnect, onOpen, onClose, onError, onMessage]);
+  }, [socketUrl, protocols, reconnectAttempts, reconnectInterval]);
 
   useEffect(() => {
     if (socketUrl) {

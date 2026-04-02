@@ -2,10 +2,10 @@ import { useEffect, useRef, type RefObject } from "react";
 
 /**
  * Hook for adding event listeners to DOM elements with automatic cleanup
- * Handles both ref objects and direct element references safely
+ * Accepts either a RefObject or a direct element reference
  * Handler updates are applied without re-registering the listener
  *
- * @param target - RefObject pointing to the target HTML element
+ * @param target - RefObject pointing to the target element, or a direct element/null reference
  * @param eventName - Name of the event to listen for (e.g., 'click', 'scroll')
  * @param handler - Event handler function to execute when event fires
  * @param options - Optional event listener options (capture, passive, once, etc.)
@@ -28,7 +28,7 @@ import { useEffect, useRef, type RefObject } from "react";
  * useEventListener(ref, 'scroll', handleScroll, options);
  */
 export function useEventListener(
-  target: RefObject<HTMLElement | null>,
+  target: RefObject<HTMLElement | null> | HTMLElement | null,
   eventName: string,
   handler: (event: Event) => void,
   options?: AddEventListenerOptions
@@ -42,7 +42,7 @@ export function useEventListener(
   });
 
   useEffect(() => {
-    const el = target?.current ?? (target as unknown as HTMLElement);
+    const el = target && 'current' in target ? target.current : target;
     if (!el?.addEventListener) return;
 
     const listener = (event: Event) => handlerRef.current(event);

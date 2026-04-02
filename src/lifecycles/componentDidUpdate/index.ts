@@ -3,9 +3,14 @@ import { useEffect } from "react";
 /**
  * React hook equivalent to componentDidUpdate lifecycle method
  * Executes a function after every render (component update)
- * 
+ *
+ * **This is a React hook.** It must only be called at the top level of a
+ * React component or custom hook — never inside conditions, loops, or
+ * callbacks. Because the name does not start with `use`, ESLint's
+ * react-hooks plugin will not enforce these rules automatically.
+ *
  * @param func - Function to execute after each component update
- * 
+ *
  * @example
  * function MyComponent({ userId }) {
  *   componentDidUpdate(() => {
@@ -13,14 +18,14 @@ import { useEffect } from "react";
  *     // Update document title or perform side effects
  *     document.title = `User ${userId}`;
  *   });
- * 
+ *
  *   return <div>User Profile</div>;
  * }
- * 
+ *
  * @example
  * // Track component updates
  * componentDidUpdate(() => {
- *   analytics.track('component_updated', { 
+ *   analytics.track('component_updated', {
  *     component: 'UserProfile',
  *     timestamp: Date.now()
  *   });

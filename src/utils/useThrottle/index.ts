@@ -39,7 +39,7 @@ export function useThrottle<T>(value: T, interval = 500): T {
       setThrottledValue(value);
     } else {
       const id = setTimeout(() => {
-        lastUpdated.current = now;
+        lastUpdated.current = Date.now();
         setThrottledValue(value);
       }, interval);
 
