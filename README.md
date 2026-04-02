@@ -222,6 +222,23 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
 
+### v0.4.1
+
+#### Bug fixes
+- **`useWebSocket`** — Fixed infinite reconnection loop when callback props (`onOpen`, `onClose`, `onError`, `onMessage`, `shouldReconnect`) were passed as inline functions; callbacks are now stored in refs and excluded from `connectWebSocket` deps
+- **`useLocalStorage` / `useSessionStorage`** — Fixed functional updaters silently failing when the key does not yet exist in storage; the previous value now correctly falls back to `initialValue` instead of throwing from `JSON.parse('')`
+- **`useThrottle`** — Fixed trailing-edge timeout recording a stale timestamp; `lastUpdated` is now set to `Date.now()` at fire time, not capture time
+- **`useCopyToClipboard`** — `execCommand` fallback no longer reports success when the copy actually failed; state is only updated when `execCommand` returns `true`
+- **`loadScript`** — Boolean `false` attributes (e.g. `async: false`, `defer: false`) now correctly call `removeAttribute` instead of setting the attribute to the string `"false"` (which would still make the script async/deferred)
+
+#### Improvements
+- **`useGeolocation`** — Extracted unsupported-API error to a named module-level constant; `optionsRef` is now updated on every render so option changes are picked up by the active watch
+- **`useEventListener`** — Type widened to accept `HTMLElement | null` directly in addition to `RefObject`; replaced unsafe double-cast with a proper `'current' in target` check
+- **`useLocalStorage` / `useSessionStorage`** — `initialValue` stabilised via `useRef` so passing object/array literals no longer causes unnecessary effect re-runs
+- **`useManualUpdate`** — Removed unnecessary `% 1_000_000` modulo
+- **`createShortcut`** (`useKeyboardShortcuts`) — Documented that `preventDefault` defaults to `true`, unlike raw shortcut objects
+- **Lifecycle hooks** (`componentDidMount`, `componentDidUpdate`, `componentWillMount`, `componentWillUnmount`) — Added explicit JSDoc warning that these are React hooks requiring top-level call discipline
+
 ### v0.4.0
 - Added 9 new hooks: `useCounter`, `useBoolean`, `useUpdateEffect`, `useIsMounted`, `usePageVisibility`, `useMousePosition`, `useDarkMode`, `useLongPress`, `useFullscreen`
 - 421 tests, 99%+ coverage
