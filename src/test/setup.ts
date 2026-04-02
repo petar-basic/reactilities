@@ -55,6 +55,7 @@ Object.defineProperty(navigator, 'clipboard', {
     readText: vi.fn(),
   },
   writable: true,
+  configurable: true,
 })
 
 // Mock navigator.geolocation

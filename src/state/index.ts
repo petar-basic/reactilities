@@ -11,3 +11,5 @@ export * from './useMap';
 export * from './useUndoRedo';
 export * from './useCounter';
 export * from './useBoolean';
+export * from './useStep';
+export * from './useClipboard';

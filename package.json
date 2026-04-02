@@ -24,6 +24,7 @@
   "bugs": {
     "url": "https://github.com/petar-basic/reactilities/issues"
   },
+  "sideEffects": false,
   "type": "module",
   "files": [
     "dist"

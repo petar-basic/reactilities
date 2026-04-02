@@ -14,3 +14,8 @@ export * from './useMousePosition';
 export * from './useDarkMode';
 export * from './useLongPress';
 export * from './useFullscreen';
+export * from './useScrollTo';
+export * from './useOrientation';
+export * from './useBattery';
+export * from './usePortal';
+export * from './useRovingTabIndex';
