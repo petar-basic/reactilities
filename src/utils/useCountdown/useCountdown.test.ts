@@ -75,6 +75,73 @@ describe('useCountdown', () => {
     expect(result.current.isRunning).toBe(false);
   });
 
+  it('should count up past 0 and keep running with default countStop in increment mode', () => {
+    // Default countStop in increment mode must be Infinity (unbounded stopwatch),
+    // NOT 0 — otherwise the first tick (next=1 >= 0) immediately clamps to 0 and stops.
+    const { result } = renderHook(() =>
+      useCountdown({ countStart: 0, isIncrement: true })
+    );
+
+    act(() => result.current.start());
+    expect(result.current.isRunning).toBe(true);
+
+    // Multiple ticks: count must keep climbing, never resetting to 0.
+    act(() => vi.advanceTimersByTime(1000));
+    expect(result.current.count).toBe(1);
+    expect(result.current.isRunning).toBe(true);
+
+    act(() => vi.advanceTimersByTime(1000));
+    expect(result.current.count).toBe(2);
+    expect(result.current.isRunning).toBe(true);
+
+    act(() => vi.advanceTimersByTime(3000));
+    expect(result.current.count).toBe(5);
+    expect(result.current.isRunning).toBe(true);
+  });
+
+  it('should stop at explicit countStop in increment mode', () => {
+    const { result } = renderHook(() =>
+      useCountdown({ countStart: 0, countStop: 3, isIncrement: true })
+    );
+
+    act(() => result.current.start());
+    act(() => vi.advanceTimersByTime(2000));
+    expect(result.current.count).toBe(2);
+    expect(result.current.isRunning).toBe(true);
+
+    // Overshoot the interval — must clamp at countStop and stop.
+    act(() => vi.advanceTimersByTime(5000));
+    expect(result.current.count).toBe(3);
+    expect(result.current.isRunning).toBe(false);
+  });
+
+  it('should still stop at default countStop of 0 in decrement mode', () => {
+    // Decrement default behavior must be unchanged: stops at 0.
+    const { result } = renderHook(() => useCountdown({ countStart: 3 }));
+
+    act(() => result.current.start());
+    act(() => vi.advanceTimersByTime(2000));
+    expect(result.current.count).toBe(1);
+    expect(result.current.isRunning).toBe(true);
+
+    act(() => vi.advanceTimersByTime(5000));
+    expect(result.current.count).toBe(0);
+    expect(result.current.isRunning).toBe(false);
+  });
+
+  it('should respect explicit countStop of 0 in increment mode (caller intent preserved)', () => {
+    // If a caller explicitly passes countStop: 0 while incrementing, the timer
+    // is "already done" — count must stay clamped at 0 and not run.
+    const { result } = renderHook(() =>
+      useCountdown({ countStart: 0, countStop: 0, isIncrement: true })
+    );
+
+    act(() => result.current.start());
+    act(() => vi.advanceTimersByTime(3000));
+    expect(result.current.count).toBe(0);
+    expect(result.current.isRunning).toBe(false);
+  });
+
   it('should support custom interval', () => {
     const { result } = renderHook(() =>
       useCountdown({ countStart: 10, intervalMs: 500 })

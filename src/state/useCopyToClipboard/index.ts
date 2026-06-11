@@ -4,11 +4,18 @@ import { useCallback, useState } from "react";
 function oldSchoolCopy(text: string): boolean {
   const tempTextArea = document.createElement("textarea");
   tempTextArea.value = text;
+  // Keep the textarea off-screen and invisible so it never flashes in the UI.
+  tempTextArea.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
   document.body.appendChild(tempTextArea);
-  tempTextArea.select();
-  const success = document.execCommand("copy");
-  document.body.removeChild(tempTextArea);
-  return success;
+  try {
+    tempTextArea.select();
+    // Capture the boolean result so callers can report whether the copy worked.
+    return document.execCommand("copy");
+  } finally {
+    // Always remove the textarea, even if select()/execCommand() throws,
+    // so we never leak a focused, invisible textarea into the DOM.
+    document.body.removeChild(tempTextArea);
+  }
 }
 
 /**
@@ -17,6 +24,7 @@ function oldSchoolCopy(text: string): boolean {
  * Tracks the last copied value for UI feedback
  *
  * @returns Array containing [copiedValue, copyFunction]
+ *   - copyFunction returns a Promise<boolean> that resolves to whether the copy succeeded
  *
  * @example
  * function CopyButton({ text }) {
@@ -36,8 +44,8 @@ function oldSchoolCopy(text: string): boolean {
  *   const [showFeedback, setShowFeedback] = useState(false);
  *
  *   const handleCopy = async () => {
- *     await copyToClipboard(url);
- *     setShowFeedback(true);
+ *     const ok = await copyToClipboard(url);
+ *     if (ok) setShowFeedback(true);
  *     setTimeout(() => setShowFeedback(false), 2000);
  *   };
  *
@@ -50,27 +58,32 @@ function oldSchoolCopy(text: string): boolean {
  *   );
  * }
  */
-export function useCopyToClipboard(): [string | null, (value: string) => void] {
+export function useCopyToClipboard(): [string | null, (value: string) => Promise<boolean>] {
   const [state, setState] = useState<string | null>(null);
 
-  const copyToClipboard = useCallback((value: string) => {
-    const handleCopy = async () => {
+  const copyToClipboard = useCallback(async (value: string): Promise<boolean> => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        setState(value);
+        return true;
+      }
+      throw new Error("writeText not supported");
+    } catch {
+      // execCommand is deprecated but kept as a fallback for older browsers.
+      // Guard the fallback too: select()/execCommand() can throw, and we must
+      // never let the copy function reject unexpectedly. oldSchoolCopy always
+      // cleans up its temporary textarea via finally, but a thrown error still
+      // needs to be swallowed here so the Promise resolves to false instead.
+      // Only update state when the copy actually succeeded.
       try {
-        if (navigator?.clipboard?.writeText) {
-          await navigator.clipboard.writeText(value);
-          setState(value);
-        } else {
-          throw new Error("writeText not supported");
-        }
-      } catch {
-        // execCommand is deprecated but kept as a fallback for older browsers.
-        // Only update state when the copy actually succeeded.
         const success = oldSchoolCopy(value);
         if (success) setState(value);
+        return success;
+      } catch {
+        return false;
       }
     }
-
-    handleCopy()
   }, []);
 
   return [state, copyToClipboard];

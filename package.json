@@ -18,7 +18,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/petar-basic/reactilities.git"
+    "url": "git+https://github.com/petar-basic/reactilities.git"
   },
   "homepage": "https://github.com/petar-basic/reactilities#readme",
   "bugs": {
@@ -29,23 +29,43 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/reactilities.umd.cjs",
-  "module": "./dist/reactilities.js",
-  "types": "./dist/main.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/main.d.ts",
-      "import": "./dist/reactilities.js",
-      "require": "./dist/reactilities.umd.cjs"
-    }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./*": {
+      "import": {
+        "types": "./dist/*.d.ts",
+        "default": "./dist/*.js"
+      },
+      "require": {
+        "types": "./dist/*.d.cts",
+        "default": "./dist/*.cjs"
+      }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -b && vite build",
+    "build": "tsup && node scripts/add-use-client.mjs",
     "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
     "test": "vitest",
+    "test:run": "vitest run",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
-    "prepublishOnly": "npm run build"
+    "test:coverage": "vitest run --coverage",
+    "attw": "attw --pack .",
+    "publint": "publint",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm run test:run && npm run build"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -55,6 +75,7 @@
     "react-dom": ">=18.0.0"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.3",
     "@eslint/js": "^9.36.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -69,12 +90,13 @@
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
     "jsdom": "^27.0.1",
+    "publint": "^0.3.21",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "tsup": "^8.5.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
     "vite": "^7.1.7",
-    "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.0.4"
   }
 }

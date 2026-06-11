@@ -108,4 +108,36 @@ describe('useWhyDidYouRender', () => {
     expect(console.group).toHaveBeenCalledTimes(1)
     expect(console.groupEnd).toHaveBeenCalledTimes(1)
   })
+
+  // Mutation-proof: in a bundler-less ESM environment (import maps / unpkg / jsdelivr)
+  // there is no `process` global, so a bare `process.env.NODE_ENV` access throws
+  // `ReferenceError: process is not defined`. The guard must short-circuit before
+  // touching `process` and fall back to dev behavior. Removing the
+  // `typeof process !== 'undefined'` guard reintroduces the throw here.
+  describe('when process is undefined (bundler-less ESM)', () => {
+    let savedProcess: typeof globalThis.process
+
+    beforeEach(() => {
+      savedProcess = globalThis.process
+      // Remove the global binding entirely so a bare `process` reference throws,
+      // exactly as it would in a browser ESM runtime.
+      delete (globalThis as { process?: unknown }).process
+    })
+
+    afterEach(() => {
+      globalThis.process = savedProcess
+    })
+
+    it('should not throw and should still log changes (treats absent process as non-production)', () => {
+      const { rerender } = renderHook(
+        ({ v }) => useWhyDidYouRender('NoProcess', { v }),
+        { initialProps: { v: 1 } }
+      )
+
+      expect(() => rerender({ v: 2 })).not.toThrow()
+      expect(console.group).toHaveBeenCalledWith(
+        expect.stringContaining('NoProcess')
+      )
+    })
+  })
 })

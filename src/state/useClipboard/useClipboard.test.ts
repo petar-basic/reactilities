@@ -154,6 +154,33 @@ describe('useClipboard', () => {
     expect(document.body.querySelectorAll('textarea')).toHaveLength(0)
   })
 
+  it('should report failure when legacy execCommand returns false', async () => {
+    Object.defineProperty(navigator.clipboard, 'writeText', {
+      value: undefined,
+      configurable: true,
+      writable: true
+    })
+    const execCommandMock = vi.fn().mockReturnValue(false)
+    Object.defineProperty(document, 'execCommand', {
+      value: execCommandMock,
+      configurable: true,
+      writable: true
+    })
+
+    const { result } = renderHook(() => useClipboard())
+    let success = true
+    await act(async () => { success = await result.current.copy('hello') })
+
+    // execCommand('copy') returned false → the copy did not happen,
+    // so copy() must report failure and must NOT mark a successful copy.
+    expect(execCommandMock).toHaveBeenCalledWith('copy')
+    expect(success).toBe(false)
+    expect(result.current.hasCopied).toBe(false)
+    expect(result.current.value).toBeNull()
+    // Temp textarea must still be cleaned up on the failure path
+    expect(document.body.querySelectorAll('textarea')).toHaveLength(0)
+  })
+
   it('should remove the legacy textarea even when execCommand throws', async () => {
     Object.defineProperty(navigator.clipboard, 'writeText', {
       value: undefined,

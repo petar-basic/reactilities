@@ -1,6 +1,6 @@
 # componentDidUpdate
 
-Hook that mimics the `componentDidUpdate` lifecycle method from class components. Runs a function after every render (including the first one).
+Hook that mimics the `componentDidUpdate` lifecycle method from class components. Runs a function after every render **except** the initial mount, just like the class lifecycle method (which only fires on updates).
 
 ## Usage
 
@@ -20,7 +20,7 @@ function Component({ value }) {
 
 ### Parameters
 
-- **`fn`** (`() => void`) - Function to run after every render
+- **`fn`** (`() => void`) - Function to run after every render except the first
 
 ### Returns
 
@@ -70,15 +70,16 @@ function Page({ pageName }) {
 
 ## Features
 
-- ✅ Runs after every render
+- ✅ Runs after every render except the first
 - ✅ Class component lifecycle equivalent
 - ✅ TypeScript support
-- ✅ Includes first render
+- ✅ Skips the initial mount
+- ✅ StrictMode-safe
 
 ## Notes
 
-- Function runs after every render (including mount)
-- Equivalent to `useEffect(() => { ... })` (no dependency array)
-- Runs on mount AND updates
+- Function runs after every render **except** the initial mount
+- Skips the first render, so it only fires on updates (re-renders)
+- StrictMode-safe: the simulated unmount/remount in development does not produce a spurious update call
 - Use with caution - can cause performance issues if not careful
 - Consider using `useEffect` with dependencies for more control

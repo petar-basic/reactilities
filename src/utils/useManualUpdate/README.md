@@ -90,7 +90,7 @@ function FocusTracker() {
 ## Features
 
 - Stable function reference — safe to include in dependency arrays
-- Counter wraps at 1,000,000 to prevent unbounded growth
+- Backed by `useReducer` with a monotonically incrementing counter
 - Zero external dependencies
 
 ## Notes

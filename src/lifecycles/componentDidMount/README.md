@@ -21,7 +21,7 @@ function Component() {
 
 ### Parameters
 
-- **`fn`** (`() => void`) - Function to run after component mounts
+- **`fn`** (`() => void | (() => void)`) - Function to run after component mounts. May optionally return a cleanup function to run on unmount.
 
 ### Returns
 
@@ -72,13 +72,29 @@ function App() {
 ## Features
 
 - ✅ Runs once after mount
+- ✅ Optional cleanup on unmount (return a function)
 - ✅ Class component lifecycle equivalent
 - ✅ TypeScript support
 - ✅ Simple API
 
+## Examples
+
+### Subscription with cleanup
+
+```tsx
+function Clock() {
+  componentDidMount(() => {
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  });
+
+  return <div>Clock</div>;
+}
+```
+
 ## Notes
 
 - Function runs only once after initial render
-- Equivalent to `useEffect(() => { ... }, [])`
+- Equivalent to `useEffect(() => { ...; return cleanup; }, [])`
 - Does not run on re-renders
-- No cleanup function (use `componentWillUnmount` for cleanup)
+- If the function returns another function, it is treated as the unmount cleanup (same contract as `useEffect`). You can also use `componentWillUnmount` for cleanup.

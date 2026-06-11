@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * React hook equivalent to componentWillUnmount lifecycle method
@@ -38,6 +38,12 @@ import { useEffect } from "react";
  * });
  */
 export function componentWillUnmount<T>(func: () => T): void {
-  // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
-  useEffect(() => { return () => { func(); }; }, []);
+  // Keep the latest callback in a ref so the unmount cleanup always invokes
+  // the most recent closure, not the one captured on the first render.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const fnRef = useRef(func);
+  fnRef.current = func;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => () => { fnRef.current(); }, []);
 }

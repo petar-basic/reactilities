@@ -36,7 +36,7 @@ function OTPForm() {
 | Option        | Type      | Default  | Description                                        |
 |---------------|-----------|----------|----------------------------------------------------|
 | `countStart`  | `number`  | required | Starting count value                               |
-| `countStop`   | `number`  | `0`      | Value at which the countdown automatically stops   |
+| `countStop`   | `number`  | `0` (countdown) / `Infinity` (count-up) | Value at which the timer automatically stops. Defaults to `0` in countdown mode and `Infinity` in count-up mode, so an unbounded stopwatch counts forever until stopped manually. |
 | `intervalMs`  | `number`  | `1000`   | Interval between ticks in milliseconds             |
 | `isIncrement` | `boolean` | `false`  | Count up instead of down                           |
 
@@ -145,3 +145,5 @@ function ProgressBar({ durationMs }: { durationMs: number }) {
 - `reset()` stops the timer and returns to `countStart`
 - Interval is cleared on unmount — no memory leaks
 - Supports both countdown and count-up via `isIncrement`
+- In count-up mode, omitting `countStop` leaves the timer unbounded (`Infinity`) — it counts up until stopped manually
+- An explicit `countStop: 0` is preserved and not treated as omitted

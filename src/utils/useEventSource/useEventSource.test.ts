@@ -160,4 +160,54 @@ describe('useEventSource', () => {
     const { result } = renderHook(() => useEventSource('/api/events'))
     expect(result.current.lastMessage).toBeNull()
   })
+
+  it('should reset readyState and lastMessage when url transitions to null', () => {
+    const { result, rerender } = renderHook(
+      ({ url }: { url: string | null }) => useEventSource(url),
+      { initialProps: { url: '/api/events' as string | null } }
+    )
+
+    const source = lastSource
+    act(() => {
+      source?.open()
+      source?.receiveMessage('{"count":42}')
+    })
+    expect(result.current.readyState).toBe(1)
+    expect(result.current.lastMessage?.data).toBe('{"count":42}')
+
+    act(() => {
+      rerender({ url: null })
+    })
+
+    // Connection must be closed and state reset to "no connection",
+    // not left at OPEN with a stale lastMessage.
+    expect(source?.close).toHaveBeenCalled()
+    expect(result.current.readyState).toBe(2)
+    expect(result.current.lastMessage).toBeNull()
+  })
+
+  it('should start with CLOSED readyState when url is null', () => {
+    const { result } = renderHook(() => useEventSource(null))
+    expect(result.current.readyState).toBe(2)
+    expect(result.current.lastMessage).toBeNull()
+  })
+
+  it('should close the old connection and open a new one when url changes', () => {
+    const { rerender } = renderHook(
+      ({ url }: { url: string }) => useEventSource(url),
+      { initialProps: { url: '/api/a' } }
+    )
+
+    const sourceA = lastSource
+    expect(sourceA?.url).toBe('/api/a')
+
+    act(() => {
+      rerender({ url: '/api/b' })
+    })
+
+    const sourceB = lastSource
+    expect(sourceA?.close).toHaveBeenCalledTimes(1)
+    expect(sourceB).not.toBe(sourceA)
+    expect(sourceB?.url).toBe('/api/b')
+  })
 })

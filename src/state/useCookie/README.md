@@ -36,7 +36,7 @@ function ConsentBanner() {
 |-------|---------------------------------------------------------|--------------------------------------|
 | `[0]` | `string \| null`                                        | Current cookie value, or `null` if not set |
 | `[1]` | `(value: string, options?: CookieOptions) => void`      | Set the cookie value                 |
-| `[2]` | `() => void`                                            | Delete the cookie                    |
+| `[2]` | `(options?: Pick<CookieOptions, 'path' \| 'domain'>) => void` | Delete the cookie. Pass the same `path`/`domain` the cookie was created with so a scoped cookie is actually removed. If omitted, the last `setCookie` `path`/`domain` is reused. |
 
 ### CookieOptions
 
@@ -95,11 +95,17 @@ function useSessionFlag(key: string) {
 
 - Zero dependencies — no `js-cookie` or other libraries
 - Names and values are automatically encoded/decoded with `encodeURIComponent` / `decodeURIComponent`
-- SSR-safe — returns `null` when `document` is not available
+- Built on `useSyncExternalStore` keyed on the cookie `name`:
+  - **Reactive to `name` changes** — passing a new name (e.g. `useCookie(`prefs-${userId}`)`) re-reads that cookie
+  - **In-app sync** — every instance of the hook on the same name updates when one of them calls `setCookie`/`deleteCookie`
+  - When the native [CookieStore](https://developer.mozilla.org/en-US/docs/Web/API/CookieStore) API is available it is feature-detected and used to pick up cookie changes made outside the hook
+- SSR-safe — `getServerSnapshot` returns `null`, so the server render and the first client render agree (no hydration mismatch)
+- Correctly reads a cookie even when the same name appears more than once (e.g. set on both `/` and `/admin`) — the first match is returned
 - `expires` accepts either a `Date` object or a number of days for convenience
 - Deleting a cookie sets it to an expired date, which is the standard browser mechanism
 
 ## Notes
 
-- Cookie state is local to the component — changes made by other tabs or direct `document.cookie` writes are not automatically reflected
-- For cross-tab sync, pair with `useLocalStorage` or a `storage` event listener
+- On the very first client render the value is `null`; the real cookie value is read immediately after mount (this is what keeps SSR hydration safe)
+- Sync is in-app (same document). For cross-tab sync, pair with `useLocalStorage` or a `storage` event listener
+- To delete a cookie that was set with a custom `path` or `domain`, pass them to `deleteCookie({ path, domain })` (or rely on the hook reusing the last `setCookie` scope) — browsers only remove a cookie when the delete write matches its scope

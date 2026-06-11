@@ -1,6 +1,6 @@
 # useGeolocation
 
-Hook for accessing user's geolocation. Provides current position coordinates and handles permission requests automatically.
+Hook for accessing device geolocation with continuous position tracking. Uses `watchPosition` for real-time updates and exposes position data, accuracy, loading, and error state.
 
 ## Usage
 
@@ -8,11 +8,11 @@ Hook for accessing user's geolocation. Provides current position coordinates and
 import { useGeolocation } from 'reactilities';
 
 function LocationDisplay() {
-  const { latitude, longitude, error } = useGeolocation();
-  
-  if (error) return <div>Error: {error}</div>;
-  if (!latitude) return <div>Loading location...</div>;
-  
+  const { latitude, longitude, loading, error } = useGeolocation();
+
+  if (loading) return <div>Getting location...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
   return (
     <div>
       Lat: {latitude}, Lng: {longitude}
@@ -23,16 +23,37 @@ function LocationDisplay() {
 
 ## API
 
+### Signature
+
+```ts
+function useGeolocation(options?: PositionOptions): GeolocationState
+```
+
 ### Parameters
 
-None
+- **`options`** (`PositionOptions`, optional) - Standard Geolocation API options. Changing any of these re-registers the position watch.
+  - **`enableHighAccuracy`** (`boolean`) - Request the most accurate position available.
+  - **`timeout`** (`number`) - Maximum time in milliseconds to wait for a position.
+  - **`maximumAge`** (`number`) - Maximum age in milliseconds of a cached position to accept.
 
 ### Returns
 
-Object containing:
-- **`latitude`** (`number | null`) - Current latitude
-- **`longitude`** (`number | null`) - Current longitude  
-- **`error`** (`string | null`) - Error message if geolocation fails
+`GeolocationState` object:
+
+| Property | Type | Description |
+|---|---|---|
+| `loading` | `boolean` | `true` until the first position fix (or error) arrives |
+| `latitude` | `number \| null` | Current latitude |
+| `longitude` | `number \| null` | Current longitude |
+| `accuracy` | `number \| null` | Accuracy of the lat/lng in meters |
+| `altitude` | `number \| null` | Altitude in meters above the WGS84 ellipsoid |
+| `altitudeAccuracy` | `number \| null` | Accuracy of the altitude in meters |
+| `heading` | `number \| null` | Direction of travel in degrees (0 = north) |
+| `speed` | `number \| null` | Ground speed in meters per second |
+| `timestamp` | `number \| null` | Time the position was acquired (ms since epoch) |
+| `error` | `GeolocationPositionError \| null` | Error object if geolocation fails |
+
+> `error` is a `GeolocationPositionError` (with `.code` and `.message`), not a plain string. Read `error.message` for a human-readable description.
 
 ## Examples
 
@@ -40,20 +61,41 @@ Object containing:
 
 ```tsx
 function MapView() {
-  const { latitude, longitude, error } = useGeolocation();
-  
+  const { latitude, longitude, loading, error } = useGeolocation();
+
   if (error) {
-    return <div>Unable to get location: {error}</div>;
+    return <div>Unable to get location: {error.message}</div>;
   }
-  
-  if (!latitude || !longitude) {
+
+  if (loading || latitude === null || longitude === null) {
     return <div>Getting your location...</div>;
   }
-  
+
   return (
     <Map center={[latitude, longitude]} zoom={13}>
       <Marker position={[latitude, longitude]} />
     </Map>
+  );
+}
+```
+
+### High-accuracy tracking
+
+```tsx
+function LiveTracker() {
+  const { latitude, longitude, accuracy, speed, heading } = useGeolocation({
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0
+  });
+
+  return (
+    <div>
+      <p>Position: {latitude}, {longitude}</p>
+      <p>Accuracy: {accuracy}m</p>
+      <p>Speed: {speed ?? 0} m/s</p>
+      <p>Heading: {heading ?? 'unknown'}</p>
+    </div>
   );
 }
 ```
@@ -64,14 +106,14 @@ function MapView() {
 function NearbyPlaces() {
   const { latitude, longitude } = useGeolocation();
   const [places, setPlaces] = useState([]);
-  
+
   useEffect(() => {
-    if (latitude && longitude) {
+    if (latitude !== null && longitude !== null) {
       fetchNearbyPlaces(latitude, longitude)
         .then(setPlaces);
     }
   }, [latitude, longitude]);
-  
+
   return (
     <ul>
       {places.map(place => (
@@ -88,17 +130,17 @@ function NearbyPlaces() {
 function WeatherWidget() {
   const { latitude, longitude, error } = useGeolocation();
   const [weather, setWeather] = useState(null);
-  
+
   useEffect(() => {
-    if (latitude && longitude) {
+    if (latitude !== null && longitude !== null) {
       fetchWeather(latitude, longitude)
         .then(setWeather);
     }
   }, [latitude, longitude]);
-  
-  if (error) return <div>Location access denied</div>;
+
+  if (error) return <div>Location access denied: {error.message}</div>;
   if (!weather) return <div>Loading weather...</div>;
-  
+
   return (
     <div>
       <h3>Weather at your location</h3>
@@ -111,15 +153,18 @@ function WeatherWidget() {
 
 ## Features
 
-- ✅ Automatic permission handling
-- ✅ Error handling
+- ✅ Continuous position tracking via `watchPosition`
+- ✅ Full position data: coordinates, accuracy, altitude, heading, speed, timestamp
+- ✅ `loading` and `error` state tracking
+- ✅ Re-registers the watch when options change
+- ✅ Falls back to a `POSITION_UNAVAILABLE` error when the API is unavailable (SSR-safe — never throws)
+- ✅ Automatic cleanup (clears the watch on unmount)
 - ✅ TypeScript support
-- ✅ SSR-safe
-- ✅ Automatic cleanup
 
 ## Notes
 
-- Requires user permission
-- May not work on HTTP (requires HTTPS in production)
-- Position updates only on mount (not continuous tracking)
-- Error states include permission denied, unavailable, timeout
+- Requires user permission; the browser prompts on first use.
+- Continuous tracking: the position updates on every fix, not just once on mount.
+- Requires a secure context (HTTPS) in production.
+- When `navigator.geolocation` is unavailable (e.g. during SSR or in unsupported browsers), the hook resolves to `loading: false` with a `GeolocationPositionError` (`code: 2`, POSITION_UNAVAILABLE) instead of throwing.
+- Error codes follow the spec: `1` = PERMISSION_DENIED, `2` = POSITION_UNAVAILABLE, `3` = TIMEOUT.

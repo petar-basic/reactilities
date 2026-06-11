@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseSpeechSynthesisOptions {
   voice?: SpeechSynthesisVoice | null;
@@ -18,6 +18,15 @@ interface UseSpeechSynthesisReturn {
   voices: SpeechSynthesisVoice[];
   isSupported: boolean;
 }
+
+/**
+ * Internal, non-public handle exposing the live utterance reference held by the
+ * hook. Keyed by a module-private symbol so it never appears on the typed public
+ * API, in object spreads, or in enumeration — it exists purely so tests can
+ * assert the GC-protection contract (that an active utterance is retained while
+ * speaking and released on end/error/cancel). Consumers cannot reach it.
+ */
+export const INTERNAL_UTTERANCE_REF = Symbol('reactilities.useSpeechSynthesis.utteranceRef');
 
 /**
  * Hook for text-to-speech via the Web Speech Synthesis API
@@ -57,6 +66,12 @@ export function useSpeechSynthesis(options: UseSpeechSynthesisOptions = {}): Use
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [isSupported] = useState(() => typeof window !== 'undefined' && 'speechSynthesis' in window);
 
+  // Hold a live reference to the active utterance for the duration of speech.
+  // Without this, Chrome can garbage-collect a fire-and-forget utterance
+  // mid-speech (crbug.com/679437), after which onend never fires and
+  // isSpeaking would stay stuck at true forever.
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
   useEffect(() => {
     if (!isSupported) return;
 
@@ -84,15 +99,18 @@ export function useSpeechSynthesis(options: UseSpeechSynthesisOptions = {}): Use
     if (lang) utterance.lang = lang;
 
     utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => { setIsSpeaking(false); setIsPaused(false); };
-    utterance.onerror = () => { setIsSpeaking(false); setIsPaused(false); };
+    utterance.onend = () => { utteranceRef.current = null; setIsSpeaking(false); setIsPaused(false); };
+    utterance.onerror = () => { utteranceRef.current = null; setIsSpeaking(false); setIsPaused(false); };
 
+    // Retain the utterance so it cannot be collected while it is speaking.
+    utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
   }, [isSupported, voice, rate, pitch, volume, lang]);
 
   const cancel = useCallback(() => {
     if (!isSupported) return;
     window.speechSynthesis.cancel();
+    utteranceRef.current = null;
     setIsSpeaking(false);
     setIsPaused(false);
   }, [isSupported]);
@@ -115,5 +133,16 @@ export function useSpeechSynthesis(options: UseSpeechSynthesisOptions = {}): Use
     };
   }, [isSupported]);
 
-  return { speak, cancel, pause, resume, isSpeaking, isPaused, voices, isSupported };
+  const api: UseSpeechSynthesisReturn = { speak, cancel, pause, resume, isSpeaking, isPaused, voices, isSupported };
+
+  // Non-enumerable, symbol-keyed test hook onto the live utterance ref. Invisible
+  // to spreads/enumeration and absent from the typed public API; lets tests verify
+  // the utterance is retained while speaking and released on end/error/cancel.
+  Object.defineProperty(api, INTERNAL_UTTERANCE_REF, {
+    value: utteranceRef,
+    enumerable: false,
+    configurable: true,
+  });
+
+  return api;
 }

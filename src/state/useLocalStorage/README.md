@@ -182,7 +182,7 @@ function TodoList() {
 - ✅ Cross-tab synchronization
 - ✅ Functional updates support
 - ✅ TypeScript generics support
-- ✅ SSR-safe (throws error on server)
+- ✅ SSR-safe (renders the initial value on the server, hydrates from storage after mount)
 - ✅ Automatic cleanup
 - ✅ Handles localStorage errors gracefully
 

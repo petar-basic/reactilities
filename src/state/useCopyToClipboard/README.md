@@ -27,9 +27,9 @@ None
 
 ### Returns
 
-`[string | null, (value: string) => void]` - Array containing:
+`[string | null, (value: string) => Promise<boolean>]` - Array containing:
 - **`copiedValue`** - The last successfully copied text (or `null` if nothing copied yet)
-- **`copyToClipboard`** - Function to copy text to clipboard
+- **`copyToClipboard`** - Function to copy text to clipboard. Returns a `Promise<boolean>` that resolves to `true` when the copy succeeded and `false` otherwise, so callers can `await` it for feedback.
 
 ## Examples
 
@@ -58,7 +58,8 @@ function ShareLink({ url }) {
   const [showFeedback, setShowFeedback] = useState(false);
   
   const handleCopy = async () => {
-    copyToClipboard(url);
+    const ok = await copyToClipboard(url);
+    if (!ok) return;
     setShowFeedback(true);
     setTimeout(() => setShowFeedback(false), 2000);
   };

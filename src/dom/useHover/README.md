@@ -22,12 +22,18 @@ function HoverCard() {
 
 ### Returns
 
-`[RefObject<T | null>, boolean]` — tuple of a ref to attach to the element and a hover state boolean.
+`[HoverRef<T>, boolean]` — tuple of a ref to attach to the element and a hover state boolean.
 
-| Index | Type                  | Description                              |
-|-------|-----------------------|------------------------------------------|
-| `[0]` | `RefObject<T \| null>` | Attach to the target element via `ref=`  |
-| `[1]` | `boolean`             | `true` while the cursor is over the element |
+| Index | Type           | Description                                             |
+|-------|----------------|--------------------------------------------------------|
+| `[0]` | `HoverRef<T>`  | Attach to the target element via `ref=`                |
+| `[1]` | `boolean`      | `true` while the cursor is over the element            |
+
+`HoverRef<T>` is a callback ref (`(node: T \| null) => void`) that also exposes
+`.current` for `RefObject`-style reads. Because it is a callback ref, listeners
+are re-attached whenever the target element changes — including elements that
+are rendered conditionally after mount, or removed/replaced while hovered (which
+resets the hover state instead of leaving it stuck).
 
 ### Type parameter
 
@@ -82,6 +88,8 @@ function ListItem({ label }: { label: string }) {
 
 ## Features
 
+- Works with elements rendered conditionally after mount (state-backed callback ref)
+- Resets hover state when the target is removed or replaced — no stuck tooltips/highlights
 - Automatic `mouseenter` / `mouseleave` listener cleanup on unmount
 - Generic type parameter for full TypeScript type safety
 - Zero dependencies — no external libraries required

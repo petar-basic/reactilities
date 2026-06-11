@@ -1,6 +1,6 @@
 # useClickOutside
 
-Hook that detects clicks outside of a specified element. Useful for closing modals, dropdowns, or other overlay components. Handles both mouse clicks and touch events.
+Hook that detects clicks (presses) outside of a specified element. Useful for closing modals, dropdowns, or other overlay components. Uses a single `pointerdown` listener, so it works for both mouse and touch with one code path, fires on press rather than release, and never double-fires on touch.
 
 ## Usage
 
@@ -35,8 +35,8 @@ function Dropdown() {
 
 ### Parameters
 
-- **`ref`** (`RefObject<HTMLElement>`) - React ref object pointing to the target element
-- **`handler`** (`(event: MouseEvent | TouchEvent) => void`) - Callback function to execute when clicking outside
+- **`ref`** (`RefObject<HTMLElement | null>`) - React ref object pointing to the target element (accepts `useRef<HTMLElement>(null)`)
+- **`handler`** (`(event: PointerEvent) => void`) - Callback function to execute when pressing outside
 
 ### Returns
 
@@ -134,15 +134,19 @@ function ContextMenu() {
 
 ## Features
 
-- ✅ Detects clicks outside specified element
-- ✅ Handles both mouse and touch events
+- ✅ Detects presses outside specified element
+- ✅ Handles mouse and touch with a single `pointerdown` listener
+- ✅ Fires on press, so a text selection starting inside and released outside does not trigger it
+- ✅ Fires exactly once per tap (no touchstart + click double-fire)
+- ✅ Stable: the document listener is attached once, not re-added on every render
 - ✅ Automatically cleans up event listeners
 - ✅ TypeScript support with generics
 - ✅ Works with any HTML element type
 
 ## Notes
 
-- The hook automatically adds and removes event listeners on mount/unmount
-- Event listeners are attached to the `document` object
-- The handler is called with the original event object
+- The hook adds a single `pointerdown` listener on the `document` and removes it on unmount
+- Because it listens on press (not the `click`/release), a drag that begins inside the element and ends outside does not call the handler
+- The handler always sees the latest closure even though the listener is attached once
+- The handler is called with the original `PointerEvent`
 - Child elements of the ref element are considered "inside"

@@ -1,6 +1,6 @@
 # componentWillMount
 
-Hook that mimics the `componentWillMount` lifecycle method from class components. Runs a function synchronously before the first render.
+Hook that mimics the `componentWillMount` lifecycle method from class components. Runs a function exactly once, synchronously, during the first render — before any render output is produced. It runs in the render phase, so it is SSR-safe (no `useLayoutEffect` warning on the server). Keep the function side-effect-light and idempotent.
 
 ## Usage
 
@@ -69,16 +69,15 @@ function Component() {
 
 ## Features
 
-- ✅ Runs before first render
+- ✅ Runs once during the first render, before render output
 - ✅ Synchronous execution
+- ✅ SSR-safe (no `useLayoutEffect` warning on the server)
 - ✅ Class component lifecycle equivalent
 - ✅ TypeScript support
 
 ## Notes
 
-- Function runs once before the first render
-- Uses `useLayoutEffect` for synchronous execution
-- Equivalent to `useLayoutEffect(() => { ... }, [])`
-- Runs before DOM paint
-- Use sparingly - can block rendering
-- Prefer `componentDidMount` for async operations
+- Function runs exactly once, synchronously, during the first render
+- Implemented with a render-phase ref guard (no effect), so it runs before any render output and on the server too
+- Keep the function side-effect-light and idempotent — it runs during render
+- Use `componentDidMount` for imperative side effects (DOM access, timers, subscriptions) and async operations

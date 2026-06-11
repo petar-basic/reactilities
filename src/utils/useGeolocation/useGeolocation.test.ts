@@ -39,23 +39,6 @@ describe('useGeolocation', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('should update state on position success via getCurrentPosition', async () => {
-    vi.mocked(navigator.geolocation.getCurrentPosition).mockImplementation((success) => {
-      success(mockPosition)
-    })
-
-    const { result } = renderHook(() => useGeolocation())
-
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    expect(result.current.latitude).toBe(48.8566)
-    expect(result.current.longitude).toBe(2.3522)
-    expect(result.current.accuracy).toBe(10)
-    expect(result.current.altitude).toBe(100)
-    expect(result.current.timestamp).toBe(1234567890)
-    expect(result.current.error).toBeNull()
-  })
-
   it('should update state on position success via watchPosition', async () => {
     let watchCallback: PositionCallback | null = null
     vi.mocked(navigator.geolocation.watchPosition).mockImplementation((success) => {
@@ -71,12 +54,17 @@ describe('useGeolocation', () => {
 
     expect(result.current.latitude).toBe(48.8566)
     expect(result.current.longitude).toBe(2.3522)
+    expect(result.current.accuracy).toBe(10)
+    expect(result.current.altitude).toBe(100)
+    expect(result.current.timestamp).toBe(1234567890)
     expect(result.current.loading).toBe(false)
+    expect(result.current.error).toBeNull()
   })
 
   it('should handle position error', async () => {
-    vi.mocked(navigator.geolocation.getCurrentPosition).mockImplementation((_success, error) => {
+    vi.mocked(navigator.geolocation.watchPosition).mockImplementation((_success, error) => {
       error!(mockError)
+      return 1
     })
 
     const { result } = renderHook(() => useGeolocation())
@@ -112,18 +100,71 @@ describe('useGeolocation', () => {
     expect(navigator.geolocation.clearWatch).toHaveBeenCalledWith(42)
   })
 
-  it('should pass options to getCurrentPosition and watchPosition', () => {
+  it('should pass options to watchPosition', () => {
     renderHook(() => useGeolocation({ enableHighAccuracy: true, timeout: 5000 }))
 
-    expect(navigator.geolocation.getCurrentPosition).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.any(Function),
-      expect.objectContaining({ enableHighAccuracy: true, timeout: 5000 })
-    )
     expect(navigator.geolocation.watchPosition).toHaveBeenCalledWith(
       expect.any(Function),
       expect.any(Function),
       expect.objectContaining({ enableHighAccuracy: true, timeout: 5000 })
     )
+  })
+
+  // BUG 2 (mutation-proof): watchPosition is the single source of position
+  // updates; the redundant getCurrentPosition call has been dropped so it can
+  // no longer overwrite a fresher watch fix with an older cached one.
+  it('should NOT call getCurrentPosition (watchPosition is the only source)', () => {
+    renderHook(() => useGeolocation({ enableHighAccuracy: true }))
+
+    expect(navigator.geolocation.getCurrentPosition).not.toHaveBeenCalled()
+    expect(navigator.geolocation.watchPosition).toHaveBeenCalledTimes(1)
+  })
+
+  // BUG 1 (mutation-proof): changing a primitive option after mount must
+  // re-register the watch — clearWatch the old id and call watchPosition again
+  // with the NEW options. On the buggy code (deps: []) no re-register happens,
+  // so clearWatch is never called and watchPosition stays at 1 call.
+  it('should re-register the watch with new options when an option changes', () => {
+    vi.mocked(navigator.geolocation.watchPosition).mockReturnValue(7)
+
+    const { rerender } = renderHook(
+      ({ highAccuracy }) => useGeolocation({ enableHighAccuracy: highAccuracy }),
+      { initialProps: { highAccuracy: false } }
+    )
+
+    expect(navigator.geolocation.watchPosition).toHaveBeenCalledTimes(1)
+    expect(navigator.geolocation.watchPosition).toHaveBeenLastCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      expect.objectContaining({ enableHighAccuracy: false })
+    )
+
+    // Change an option after mount.
+    rerender({ highAccuracy: true })
+
+    // Old watch is cleared, and a new watch is registered with the new option.
+    expect(navigator.geolocation.clearWatch).toHaveBeenCalledWith(7)
+    expect(navigator.geolocation.watchPosition).toHaveBeenCalledTimes(2)
+    expect(navigator.geolocation.watchPosition).toHaveBeenLastCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      expect.objectContaining({ enableHighAccuracy: true })
+    )
+  })
+
+  // Re-registering must not leak watches and must not re-register when the
+  // option values are unchanged across re-renders (stable primitive deps).
+  it('should NOT re-register the watch when options are unchanged', () => {
+    const { rerender } = renderHook(() =>
+      useGeolocation({ enableHighAccuracy: true, timeout: 5000 })
+    )
+
+    expect(navigator.geolocation.watchPosition).toHaveBeenCalledTimes(1)
+
+    rerender()
+    rerender()
+
+    expect(navigator.geolocation.watchPosition).toHaveBeenCalledTimes(1)
+    expect(navigator.geolocation.clearWatch).not.toHaveBeenCalled()
   })
 })

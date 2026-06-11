@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 interface UseLongPressOptions {
   /** Duration in ms before the long press fires (default: 500) */
@@ -45,6 +45,13 @@ export function useLongPress(
 
   const start = useCallback(
     (event: React.PointerEvent) => {
+      // Clear any pending timer so a second pointerdown (e.g. a two-finger
+      // touch or touch+pen) doesn't orphan the first timeout. Otherwise the
+      // first timer id would be overwritten and leak: `cancel` clears only the
+      // latest, so the orphaned timer would still fire after release.
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
       onStart?.(event);
       const captured = event;
       timerRef.current = setTimeout(() => {
@@ -64,6 +71,17 @@ export function useLongPress(
       }
     },
     [onCancel]
+  );
+
+  // Clear a pending timer on unmount so a long press in flight doesn't fire its
+  // callback (and run setState) on an unmounted component with a stale event.
+  useEffect(
+    () => () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
+    },
+    []
   );
 
   return {

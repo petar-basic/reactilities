@@ -176,4 +176,44 @@ describe('useSpeechRecognition', () => {
 
     expect(recognitionInstance.start).toHaveBeenCalledTimes(1)
   })
+
+  it('should reject a second synchronous start() before onstart fires (no orphaned session)', () => {
+    // Real browsers fire onstart asynchronously. Simulate that by making the
+    // mock's start() NOT invoke onstart synchronously, and count how many
+    // SpeechRecognition instances get constructed + started.
+    let constructed = 0
+    const startSpy = vi.fn() // does NOT call onstart — mimics async browser behavior
+
+    class AsyncMockSpeechRecognition {
+      lang = ''
+      continuous = false
+      interimResults = false
+      onresult: ((e: MockResultEvent) => void) | null = null
+      onstart: (() => void) | null = null
+      onend: (() => void) | null = null
+      onerror: ((e: { error: string }) => void) | null = null
+      start = startSpy
+      stop = vi.fn()
+      constructor() {
+        constructed++
+      }
+    }
+
+    vi.stubGlobal('SpeechRecognition', AsyncMockSpeechRecognition)
+    vi.stubGlobal('webkitSpeechRecognition', AsyncMockSpeechRecognition)
+
+    const { result } = renderHook(() => useSpeechRecognition())
+
+    // Two rapid synchronous calls — the double-click scenario.
+    act(() => {
+      result.current.start()
+      result.current.start()
+    })
+
+    // Only the first call may create + start a recognition session.
+    // If the guard were async-only (set in onstart), both calls would pass and
+    // a second instance would be constructed/started, orphaning the first.
+    expect(constructed).toBe(1)
+    expect(startSpy).toHaveBeenCalledTimes(1)
+  })
 })

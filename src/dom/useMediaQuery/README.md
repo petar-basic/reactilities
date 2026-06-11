@@ -2,6 +2,8 @@
 
 Hook for responsive design using CSS media queries. Returns boolean indicating if the media query currently matches. Uses `useSyncExternalStore` for optimal performance and SSR safety.
 
+SSR-safe: on the server (and the first client render) it returns the `defaultValue`/`serverDefault` option (default `false`) instead of throwing, so components using it can be server-rendered and hydrated without crashing. The real `window.matchMedia` result is applied after mount.
+
 ## Usage
 
 ```tsx
@@ -23,6 +25,9 @@ function ResponsiveComponent() {
 ### Parameters
 
 - **`query`** (`string`) - CSS media query string to evaluate
+- **`options`** (`UseMediaQueryOptions`, optional) - Configuration for the SSR / first-render default
+  - **`defaultValue`** (`boolean`, default `false`) - Value returned during server-side rendering and the first client render, before `window.matchMedia` can be read
+  - **`serverDefault`** (`boolean`) - Alias for `defaultValue`. When both are provided, `defaultValue` takes precedence
 
 ### Returns
 
@@ -171,11 +176,22 @@ function AnimatedComponent() {
 }
 ```
 
+### SSR / First-Render Default
+
+```tsx
+function ThemedApp() {
+  // Assume light during SSR and the first client render to avoid a hydration mismatch
+  const prefersDark = useMediaQuery('(prefers-color-scheme: dark)', { defaultValue: false });
+
+  return <div className={prefersDark ? 'dark' : 'light'}>App</div>;
+}
+```
+
 ## Features
 
 - ✅ Real-time media query matching
 - ✅ Automatic updates when query match changes
-- ✅ SSR-safe with `useSyncExternalStore`
+- ✅ SSR-safe with `useSyncExternalStore` — returns a configurable default instead of throwing
 - ✅ Predefined breakpoint constants
 - ✅ TypeScript support
 - ✅ Optimized performance
@@ -185,7 +201,7 @@ function AnimatedComponent() {
 
 - Uses `window.matchMedia()` API under the hood
 - Automatically subscribes/unsubscribes to media query changes
-- Throws error when used in SSR context (use with proper guards)
+- SSR-safe: returns `defaultValue`/`serverDefault` (default `false`) during server-side rendering and the first client render instead of throwing — the real match is applied after mount
 - Supports all standard CSS media query features
 - Multiple hooks can be used in the same component
 - Changes are detected immediately without polling

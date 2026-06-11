@@ -73,7 +73,15 @@ export function useEventSource(
   }, []);
 
   useEffect(() => {
-    if (!url) return;
+    if (!url) {
+      // No URL: ensure state reflects "no connection" so consumers don't
+      // render stale data (e.g. readyState OPEN) after url transitions to null.
+      sourceRef.current?.close();
+      sourceRef.current = null;
+      setReadyState(2);
+      setLastMessage(null);
+      return;
+    }
 
     const source = new EventSource(url, { withCredentials });
     sourceRef.current = source;

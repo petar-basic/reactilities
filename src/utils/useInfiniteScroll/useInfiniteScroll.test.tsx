@@ -33,14 +33,14 @@ interface TestProps {
 }
 
 function TestComponent({ onLoadMore = vi.fn(), hasMore = true, isLoading }: TestProps) {
-  const { loaderRef, isLoading: loading } = useInfiniteScroll({
+  const { loaderRef, isLoading: loading } = useInfiniteScroll<HTMLDivElement>({
     onLoadMore,
     hasMore,
     isLoading,
   })
   return (
     <>
-      <div data-testid="loader" ref={loaderRef as React.RefObject<HTMLDivElement>} />
+      <div data-testid="loader" ref={loaderRef} />
       <span data-testid="loading">{String(loading)}</span>
     </>
   )
@@ -109,6 +109,59 @@ describe('useInfiniteScroll', () => {
     const { unmount } = render(<TestComponent />)
     unmount()
     expect(mockDisconnect).toHaveBeenCalledTimes(1)
+  })
+
+  it('should call onLoadMore exactly once for rapid double-intersection before loading commits', async () => {
+    let resolve!: () => void
+    const onLoadMore = vi.fn(
+      () => new Promise<void>((r) => { resolve = r })
+    )
+
+    render(<TestComponent onLoadMore={onLoadMore} />)
+
+    // Two intersections fire synchronously, before the `internalLoading` state
+    // (and the resulting effect re-run) can commit. The synchronous inFlightRef
+    // guard must dedupe the second call. A purely state-based guard would still
+    // see the stale `isLoading === false` closure and fire onLoadMore twice.
+    act(() => {
+      intersect(true)
+      intersect(true)
+    })
+
+    expect(onLoadMore).toHaveBeenCalledTimes(1)
+
+    // After the in-flight load resolves, a fresh intersection can load again.
+    await act(async () => { resolve() })
+
+    act(() => intersect(true))
+
+    expect(onLoadMore).toHaveBeenCalledTimes(2)
+  })
+
+  it('should attach the observer to a sentinel that mounts after the hook', () => {
+    function LateMount() {
+      const [show, setShow] = useState(false)
+      const { loaderRef } = useInfiniteScroll<HTMLDivElement>({
+        onLoadMore: vi.fn(),
+        hasMore: true,
+      })
+      return (
+        <>
+          {show && <div data-testid="loader" ref={loaderRef} />}
+          <button onClick={() => setShow(true)}>mount</button>
+        </>
+      )
+    }
+
+    const { getByText } = render(<LateMount />)
+
+    // Sentinel not rendered yet -> nothing observed.
+    expect(mockObserve).not.toHaveBeenCalled()
+
+    act(() => getByText('mount').click())
+
+    // Sentinel mounted later -> observer attaches via the callback ref.
+    expect(mockObserve).toHaveBeenCalledWith(expect.any(HTMLElement))
   })
 
   it('should always call latest onLoadMore reference', () => {

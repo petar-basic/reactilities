@@ -125,6 +125,31 @@ describe('useIdleTimeout', () => {
     expect(result.current.isIdle).toBe(true)
   })
 
+  it('should reset on a non-character keydown (e.g. ArrowDown) using default events', () => {
+    // Mutation-proof: the default events must include 'keydown', not the
+    // deprecated 'keypress'. Navigation keys (arrows, Backspace, Tab, etc.)
+    // never fire 'keypress', so a keyboard-only user would be wrongly marked
+    // idle. This dispatches a real ArrowDown keydown and asserts the timer
+    // resets — it fails if the default still listens for 'keypress'.
+    const onActive = vi.fn()
+    const { result } = renderHook(() =>
+      useIdleTimeout({ timeout: 1000, onActive })
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+
+    expect(result.current.isIdle).toBe(true)
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }))
+    })
+
+    expect(result.current.isIdle).toBe(false)
+    expect(onActive).toHaveBeenCalledTimes(1)
+  })
+
   it('should listen to custom events', () => {
     const { result } = renderHook(() =>
       useIdleTimeout({ timeout: 1000, events: ['keydown'] })

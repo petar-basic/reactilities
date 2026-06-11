@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface GeolocationState {
   loading: boolean;
@@ -26,7 +26,8 @@ const GEOLOCATION_UNSUPPORTED_ERROR: GeolocationPositionError = {
 /**
  * Hook for accessing device geolocation with continuous position tracking
  * Provides current position, accuracy, and error handling
- * Uses both getCurrentPosition and watchPosition for real-time updates
+ * Uses watchPosition for real-time updates; the watch is re-registered when
+ * any of the geolocation options (enableHighAccuracy, timeout, maximumAge) change.
  *
  * @param options - Geolocation API options (enableHighAccuracy, timeout, maximumAge)
  * @returns GeolocationState object with position data and loading/error states
@@ -69,10 +70,7 @@ export function useGeolocation(options: PositionOptions = {}): GeolocationState 
     error: null
   });
 
-  const optionsRef = useRef(options);
-  // Keep optionsRef current so changes to options take effect on the next
-  // watchPosition call without needing to re-register the effect.
-  optionsRef.current = options;
+  const { enableHighAccuracy, timeout, maximumAge } = options;
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -103,22 +101,21 @@ export function useGeolocation(options: PositionOptions = {}): GeolocationState 
       }));
     };
 
-    navigator.geolocation.getCurrentPosition(
-      onEvent,
-      onEventError,
-      optionsRef.current
-    );
-
+    // watchPosition delivers the first fix immediately and then on every
+    // subsequent update, so a separate getCurrentPosition call is redundant
+    // (and could overwrite a fresher watch update with an older cached one).
     const watchId = navigator.geolocation.watchPosition(
       onEvent,
       onEventError,
-      optionsRef.current
+      { enableHighAccuracy, timeout, maximumAge }
     );
 
     return () => {
       navigator.geolocation.clearWatch(watchId);
     };
-  }, []);
+    // Re-register the watch whenever the geolocation options change so that
+    // new options (accuracy/timeout/maximumAge) actually take effect.
+  }, [enableHighAccuracy, timeout, maximumAge]);
 
   return state;
 }

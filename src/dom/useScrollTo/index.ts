@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 interface ScrollOptions {
   behavior?: ScrollBehavior;
@@ -77,5 +77,8 @@ export function useScrollTo(): UseScrollToReturn {
     window.scrollTo({ left: x, top: y, behavior: options.behavior ?? 'smooth' });
   }, []);
 
-  return { scrollToTop, scrollToBottom, scrollToElement, scrollTo };
+  return useMemo(
+    () => ({ scrollToTop, scrollToBottom, scrollToElement, scrollTo }),
+    [scrollToTop, scrollToBottom, scrollToElement, scrollTo]
+  );
 }

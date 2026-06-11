@@ -3,8 +3,9 @@
 A comprehensive collection of useful React hooks and utilities for modern web development. Built with TypeScript for excellent developer experience and type safety.
 
 [![npm version](https://badge.fury.io/js/reactilities.svg)](https://badge.fury.io/js/reactilities)
+[![CI](https://github.com/petar-basic/reactilities/actions/workflows/ci.yml/badge.svg)](https://github.com/petar-basic/reactilities/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/petar-basic/reactilities/branch/main/graph/badge.svg)](https://codecov.io/gh/petar-basic/reactilities)
 [![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](http://www.typescriptlang.org/)
-[![Test Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen.svg)](https://github.com/petar-basic/reactilities)
 
 ## Installation
 
@@ -18,22 +19,43 @@ pnpm add reactilities
 
 ### Requirements
 
-- **React** >= 18.0.0
+- **React** >= 18.0.0 (tested against React 18 and 19)
 - **React DOM** >= 18.0.0
 
-> **Note:** This library uses `useSyncExternalStore` which requires React 18 or higher.
+> **Note:** This library uses `useSyncExternalStore`, which requires React 18 or higher.
+
+### Importing
+
+Import everything from the package root, or a single hook from its subpath — both
+tree-shake to only the code you use:
+
+```tsx
+import { useDebounce, useLocalStorage } from 'reactilities';
+// or, per-hook subpath (ships ~0.5 KB for one hook):
+import { useDebounce } from 'reactilities/useDebounce';
+```
+
+### Next.js / React Server Components
+
+Every hook ships with the `"use client"` directive, so you can import them from
+Client Components in the Next.js App Router without any wrapper. Hooks that read
+browser-only state (`useMediaQuery`, `useLocalStorage`, `useSessionStorage`,
+`useNetworkState`, `useDarkMode`, `useWindowSize`, …) are built on
+`useSyncExternalStore` and return a stable **server snapshot** during SSR, so they
+never crash server rendering and produce no hydration mismatch — the real value
+applies after mount.
 
 ## Features
 
-- **72+ React Hooks** — DOM manipulation, state management, async, timers, and more
+- **70+ React Hooks** — DOM manipulation, state management, async, timers, and more
 - **Lifecycle Helpers** — class component lifecycle methods as hooks
 - **Helper Functions** — utility functions for common tasks
 - **TypeScript Types** — utility types for better type safety
-- **TypeScript First** — full type support with excellent IntelliSense
-- **Well Tested** — 99%+ test coverage with 628 tests
-- **Tree Shakable** — import only what you need
+- **TypeScript First** — full type support with excellent IntelliSense; verified with `publint` and `are-the-types-wrong` (works under `bundler`, `node16`, and `nodenext`)
+- **Well Tested** — 857 tests on a React 18 + 19 CI matrix
+- **Tree Shakable** — package-root or per-hook subpath imports
 - **Zero Dependencies** — no external dependencies except React
-- **SSR Safe** — all hooks guard against server-side rendering issues
+- **SSR Safe** — built for the Next.js App Router; browser-backed hooks return server snapshots instead of throwing
 - **Comprehensive Docs** — each hook has its own detailed README
 
 ## API Reference
@@ -228,8 +250,8 @@ type PartialUser = DeepPartial<User>;   // All properties optional recursively
 ## Testing
 
 Reactilities comes with comprehensive tests:
-- **628 tests** covering all functionality
-- **99%+ code coverage**
+- **857 tests** covering all functionality
+- Run on every commit against **React 18 and React 19** (CI matrix)
 - Tested with Vitest and React Testing Library
 
 ## License
@@ -242,98 +264,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
 
-### v0.5.0
-
-#### New Hooks (20)
-
-**DOM**
-- **`useBattery`** — Monitor device battery level, charging state, and charge/discharge times via the Battery Status API
-- **`useOrientation`** — Track device screen orientation (portrait/landscape) with angle; registers both Screen Orientation API and legacy `window.orientationchange` for maximum browser compatibility
-- **`usePortal`** — Create a DOM portal container mounted to `document.body`; use with React's `createPortal` for modals and tooltips
-- **`useRovingTabIndex`** — Keyboard-navigable lists and menus using the WAI-ARIA roving tabIndex pattern; supports vertical/horizontal orientation and loop
-- **`useScrollTo`** — Programmatic scroll helpers: `scrollToTop`, `scrollToBottom`, `scrollToElement`, `scrollTo(x, y)`
-
-**State**
-- **`useClipboard`** — Read from and write to the clipboard; supports both the modern Clipboard API and a legacy `execCommand` fallback; tracks `hasCopied` with configurable auto-reset delay
-- **`useStep`** — Multi-step wizard and onboarding flow state; boundary-safe `next`, `prev`, `goTo`, and `reset` navigation
-
-**Utility**
-- **`useAutoSave`** — Debounced auto-save with `idle / pending / saving / saved / error` status and `lastSavedAt` timestamp; exposes a `save()` for immediate manual saves
-- **`useDebounceCallback`** — Debounce a callback function (complements `useDebounce` which debounces values)
-- **`useDragAndDrop`** — File drag-and-drop with MIME type, extension, count, and size validation; drag counter prevents flicker on nested elements
-- **`useEventSource`** — Manage Server-Sent Events (SSE) connections; tracks `lastMessage`, `readyState`, and exposes `close()`
-- **`useFileReader`** — Read `File` objects as text, data URL, or `ArrayBuffer`; tracks loading and error state; `reset()` immediately aborts an in-progress read
-- **`useIdleTimeout`** — Detect user inactivity after a configurable timeout; fires `onIdle` / `onActive` callbacks and exposes a manual `reset()`
-- **`useImageLazyLoad`** — Lazy-load images when they enter the viewport via `IntersectionObserver`; supports placeholder, threshold, and rootMargin
-- **`useLogger`** — Log component mount, update (with changed-props diff), and unmount events to the console (development only)
-- **`useSpeechRecognition`** — Voice input via the Web Speech Recognition API; returns `transcript`, `interimTranscript`, and `start / stop / reset` controls
-- **`useSpeechSynthesis`** — Text-to-speech via the Web Speech Synthesis API; supports voice selection, rate, pitch, and volume; exposes `speak / pause / resume / cancel`
-- **`useThrottleCallback`** — Throttle a callback function with trailing-edge support (complements `useThrottle` which throttles values)
-- **`useWhyDidYouRender`** — Debug unnecessary re-renders by logging exactly which props or state values changed; skips all work in production builds
-- **`useWorker`** — Run heavy computations in a Web Worker off the main thread; the worker function is serialised via `fn.toString()` and must be self-contained
-
-#### Bug fixes
-- **`useAutoSave`** — Removed the effect cleanup calling `save()` on every data change; it now only clears the pending timer, preventing double-saves during rapid updates
-- **`useFileReader`** — Changed `readerRef.current?.abort()` to `?.abort?.()` to guard against environments where the mock/polyfill lacks `abort`
-
-### v0.4.1
-
-#### Bug fixes
-- **`useWebSocket`** — Fixed infinite reconnection loop when callback props (`onOpen`, `onClose`, `onError`, `onMessage`, `shouldReconnect`) were passed as inline functions; callbacks are now stored in refs and excluded from `connectWebSocket` deps
-- **`useLocalStorage` / `useSessionStorage`** — Fixed functional updaters silently failing when the key does not yet exist in storage; the previous value now correctly falls back to `initialValue` instead of throwing from `JSON.parse('')`
-- **`useThrottle`** — Fixed trailing-edge timeout recording a stale timestamp; `lastUpdated` is now set to `Date.now()` at fire time, not capture time
-- **`useCopyToClipboard`** — `execCommand` fallback no longer reports success when the copy actually failed; state is only updated when `execCommand` returns `true`
-- **`loadScript`** — Boolean `false` attributes (e.g. `async: false`, `defer: false`) now correctly call `removeAttribute` instead of setting the attribute to the string `"false"` (which would still make the script async/deferred)
-
-#### Improvements
-- **`useGeolocation`** — Extracted unsupported-API error to a named module-level constant; `optionsRef` is now updated on every render so option changes are picked up by the active watch
-- **`useEventListener`** — Type widened to accept `HTMLElement | null` directly in addition to `RefObject`; replaced unsafe double-cast with a proper `'current' in target` check
-- **`useLocalStorage` / `useSessionStorage`** — `initialValue` stabilised via `useRef` so passing object/array literals no longer causes unnecessary effect re-runs
-- **`useManualUpdate`** — Removed unnecessary `% 1_000_000` modulo
-- **`createShortcut`** (`useKeyboardShortcuts`) — Documented that `preventDefault` defaults to `true`, unlike raw shortcut objects
-- **Lifecycle hooks** (`componentDidMount`, `componentDidUpdate`, `componentWillMount`, `componentWillUnmount`) — Added explicit JSDoc warning that these are React hooks requiring top-level call discipline
-
-### v0.4.0
-- Added 9 new hooks: `useCounter`, `useBoolean`, `useUpdateEffect`, `useIsMounted`, `usePageVisibility`, `useMousePosition`, `useDarkMode`, `useLongPress`, `useFullscreen`
-- 421 tests, 99%+ coverage
-
-### v0.3.0
-- Added 4 new hooks: `useUndoRedo`, `usePermission`, `useFocusTrap`, `useInfiniteScroll`
-- Refactored `useVirtualization` — replaced brittle `data-` attribute selector with returned `containerRef` API (breaking change)
-- Fixed `useEventListener` — replaced experimental `useEffectEvent` with stable `useRef` handler pattern
-- Fixed `useWebSocket` — resolved infinite re-render loop caused by unstable default `shouldReconnect` reference
-- 363 tests, 99%+ coverage
-
-### v0.2.0
-- Added 15 new hooks: `useAsync`, `useFetch`, `useInterval`, `useTimeout`, `useCountdown`, `useWindowSize`, `useScrollPosition`, `useHover`, `useResizeObserver`, `usePrevious`, `useList`, `useSet`, `useMap`, `useCookie`, `useIsomorphicLayoutEffect`
-- Added SSR guards to all existing hooks
-- Updated React peer dependency to >= 18.0.0 (required for `useSyncExternalStore`)
-- Removed `js-cookie` dependency — `useCookie` now uses native `document.cookie`
-- Fixed all TypeScript strict-mode and ESLint issues
-- 253 tests, 99%+ coverage
-
-### v0.1.6
-- Maintenance release
-
-### v0.1.4
-- Refactored to modular structure — each hook has its own folder with README
-- Added comprehensive documentation for all hooks
-- Improved test coverage to 99%+
-- Added more TypeScript utility types
-
-### v0.1.3
-- Added lifecycle hooks and helper functions
-- Improved TypeScript support
-
-### v0.1.2
-- Fixed export issues — all hooks now use named exports
-- Removed test files from distribution bundle
-
-### v0.1.1
-- Fixed hook exports and improved TypeScript support
-
-### v0.1.0
-- Initial release
+See [CHANGELOG.md](./CHANGELOG.md) for the full version history. Notable changes
+are kept there following [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 

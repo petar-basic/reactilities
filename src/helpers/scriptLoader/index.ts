@@ -74,12 +74,21 @@ export const loadScript = ({
 }: LoadScriptProps): void => {
   const script = document.createElement('script');
 
+  // Event handlers (onload, onerror, ...) and other functions are IDL
+  // properties, not HTML attributes. Going through setAttribute would
+  // stringify the function (`script.setAttribute('onload', String(fn))`),
+  // producing a dead string attribute that never executes. Assign them
+  // directly as properties so they actually fire.
+  //
   // Boolean IDL attributes (async, defer, noModule) must be handled with care:
   // setAttribute cannot remove an attribute, so setting async: false would still
   // make the script async because the attribute is present regardless of its value.
   // Use removeAttribute for false booleans; setAttribute for everything else.
   for (const [key, value] of Object.entries(scriptProps)) {
-    if (typeof value === 'boolean') {
+    if (typeof value === 'function') {
+      // Direct property assignment keeps the handler callable.
+      (script as unknown as Record<string, unknown>)[key] = value;
+    } else if (typeof value === 'boolean') {
       if (value) {
         script.setAttribute(key, String(value));
       } else {

@@ -55,12 +55,47 @@ export function useImageLazyLoad(
 ): UseImageLazyLoadReturn {
   const { threshold = 0, rootMargin = '200px', placeholder = '' } = options;
 
-  const ref = useRef<HTMLImageElement>(null);
   const [src, setSrc] = useState(placeholder);
   const [status, setStatus] = useState<ImageLoadStatus>('idle');
 
+  // Track the observed element in state so that a late-mounted element (one that
+  // appears after the first effect run) still gets observed: writing to
+  // `ref.current` updates state, which re-runs the effect below. (BUG 2)
+  const [element, setElement] = useState<HTMLImageElement | null>(null);
+
+  // A RefObject-compatible handle. React (and consumers) read/write `.current`;
+  // the setter mirrors the value into state so the hook reacts to mounts. This
+  // keeps the public `<img ref={ref} />` API working unchanged.
+  const refHandle = useRef<React.RefObject<HTMLImageElement | null> | null>(null);
+  if (refHandle.current === null) {
+    let node: HTMLImageElement | null = null;
+    refHandle.current = {
+      get current() {
+        return node;
+      },
+      set current(value: HTMLImageElement | null) {
+        if (value === node) return;
+        node = value;
+        setElement(value);
+      },
+    };
+  }
+  const ref = refHandle.current;
+
+  // When `imageSrc` changes, reset state so the UI does not keep showing the
+  // previously loaded image as "loaded". Skip the very first run so initial
+  // behavior is unchanged. (BUG 1)
+  const isFirstRun = useRef(true);
   useEffect(() => {
-    const element = ref.current;
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+    setSrc(placeholder);
+    setStatus('idle');
+  }, [imageSrc, placeholder]);
+
+  useEffect(() => {
     if (!element) return;
 
     let cancelled = false;
@@ -95,7 +130,7 @@ export function useImageLazyLoad(
       cancelled = true;
       observer.disconnect();
     };
-  }, [imageSrc, threshold, rootMargin]);
+  }, [element, imageSrc, threshold, rootMargin]);
 
   return { ref, src, status, isLoaded: status === 'loaded' };
 }

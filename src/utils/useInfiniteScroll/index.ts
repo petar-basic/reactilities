@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefCallback } from 'react';
 
 interface UseInfiniteScrollOptions {
   /** Called when the loader element enters the viewport */
@@ -13,9 +13,9 @@ interface UseInfiniteScrollOptions {
   rootMargin?: string;
 }
 
-interface UseInfiniteScrollReturn {
+interface UseInfiniteScrollReturn<T extends HTMLElement = HTMLElement> {
   /** Attach to the loader/sentinel element at the bottom of the list */
-  loaderRef: RefObject<HTMLElement | null>;
+  loaderRef: RefCallback<T | null>;
   /** Whether onLoadMore is currently executing (async-aware) */
   isLoading: boolean;
 }
@@ -24,6 +24,7 @@ interface UseInfiniteScrollReturn {
  * Hook for infinite scroll using IntersectionObserver
  * Observes a sentinel/loader element and calls onLoadMore when it becomes visible
  *
+ * @typeParam T - The element type the loader ref is attached to (defaults to HTMLElement)
  * @param options - Configuration options
  * @returns loaderRef to attach to the sentinel element, and isLoading state
  *
@@ -32,7 +33,7 @@ interface UseInfiniteScrollReturn {
  *   const [items, setItems] = useState([]);
  *   const [hasMore, setHasMore] = useState(true);
  *
- *   const { loaderRef, isLoading } = useInfiniteScroll({
+ *   const { loaderRef, isLoading } = useInfiniteScroll<HTMLDivElement>({
  *     onLoadMore: async () => {
  *       const next = await fetchNextPage();
  *       setItems(prev => [...prev, ...next]);
@@ -49,16 +50,19 @@ interface UseInfiniteScrollReturn {
  *   );
  * }
  */
-export function useInfiniteScroll({
+export function useInfiniteScroll<T extends HTMLElement = HTMLElement>({
   onLoadMore,
   hasMore,
   isLoading: externalLoading = false,
   threshold = 0.1,
   rootMargin = '0px',
-}: UseInfiniteScrollOptions): UseInfiniteScrollReturn {
-  const loaderRef = useRef<HTMLElement | null>(null);
+}: UseInfiniteScrollOptions): UseInfiniteScrollReturn<T> {
+  const [element, setElement] = useState<T | null>(null);
   const [internalLoading, setInternalLoading] = useState(false);
   const onLoadMoreRef = useRef(onLoadMore);
+  // Synchronous guard: prevents duplicate onLoadMore calls when the observer
+  // fires again before the `internalLoading` state commits (scroll jitter / slow render).
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
     onLoadMoreRef.current = onLoadMore;
@@ -69,23 +73,40 @@ export function useInfiniteScroll({
   const handleIntersect = useCallback(
     async (entries: IntersectionObserverEntry[]) => {
       const entry = entries[0];
-      if (!entry.isIntersecting || !hasMore || isLoading) return;
+      if (
+        !entry.isIntersecting ||
+        !hasMore ||
+        externalLoading ||
+        inFlightRef.current
+      ) {
+        return;
+      }
 
-      const result = onLoadMoreRef.current();
-      if (result instanceof Promise) {
-        setInternalLoading(true);
-        try {
-          await result;
-        } finally {
-          setInternalLoading(false);
+      inFlightRef.current = true;
+      try {
+        const result = onLoadMoreRef.current();
+        if (result instanceof Promise) {
+          setInternalLoading(true);
+          try {
+            await result;
+          } finally {
+            setInternalLoading(false);
+          }
         }
+      } finally {
+        inFlightRef.current = false;
       }
     },
-    [hasMore, isLoading]
+    [hasMore, externalLoading]
   );
 
+  // Callback ref backed by state so the observer (re)attaches whenever the
+  // sentinel element mounts — including when it mounts later than the hook.
+  const loaderRef = useCallback<RefCallback<T | null>>((node) => {
+    setElement(node);
+  }, []);
+
   useEffect(() => {
-    const element = loaderRef.current;
     if (!element) return;
 
     const observer = new IntersectionObserver(handleIntersect, {
@@ -95,7 +116,7 @@ export function useInfiniteScroll({
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [handleIntersect, threshold, rootMargin]);
+  }, [element, handleIntersect, threshold, rootMargin]);
 
   return { loaderRef, isLoading };
 }

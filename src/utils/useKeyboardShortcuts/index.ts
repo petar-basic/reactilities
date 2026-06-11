@@ -51,7 +51,7 @@ export function useKeyboardShortcuts(
   shortcuts: KeyboardShortcut[],
   options: UseKeyboardShortcutsOptions = {}
 ): void {
-  const { target = document, enabled = true } = options;
+  const { target, enabled = true } = options;
   const shortcutsRef = useRef(shortcuts);
 
   // Update shortcuts ref when shortcuts change
@@ -61,6 +61,11 @@ export function useKeyboardShortcuts(
 
   useEffect(() => {
     if (!enabled) return;
+
+    // Resolve the target inside the effect so `document` is only referenced
+    // after mount. Effects never run during server render, so this keeps the
+    // hook SSR-safe even when the consumer relies on the default target.
+    const eventTarget = (target ?? document) as EventTarget;
 
     const handleKeyDown = (event: Event) => {
       const keyboardEvent = event as KeyboardEvent;
@@ -103,7 +108,6 @@ export function useKeyboardShortcuts(
       }
     };
 
-    const eventTarget = target as EventTarget;
     eventTarget.addEventListener('keydown', handleKeyDown);
 
     return () => {

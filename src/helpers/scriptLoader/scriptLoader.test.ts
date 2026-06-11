@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { loadScript } from './index';
 
 describe('loadScript', () => {
@@ -150,5 +150,73 @@ describe('loadScript', () => {
     const script = document.head.getElementsByTagName('script')[0];
     expect(script.getAttribute('src')).toBe('https://example.com/script.js');
     expect(script.text).toBe('console.log("inline");');
+  });
+
+  // Mutation-proof: the old implementation routed every non-boolean value
+  // through setAttribute, so an onload function became the string attribute
+  // `onload="() => {...}"` which never executes. These tests fail unless the
+  // handler is assigned as a real IDL property.
+  describe('event handler props', () => {
+    it('assigns onload as a callable property, not a stringified attribute', () => {
+      const onload = vi.fn();
+
+      loadScript({
+        scriptProps: { onload } as any,
+        inlineScript: ''
+      });
+
+      const script = document.head.getElementsByTagName('script')[0];
+      // Property is set and is the exact function we passed.
+      expect(script.onload).toBe(onload);
+      expect(typeof script.onload).toBe('function');
+      // It must NOT have been stringified onto an attribute.
+      expect(script.getAttribute('onload')).toBeNull();
+    });
+
+    it('onload fires when the load event is dispatched', () => {
+      const onload = vi.fn();
+
+      loadScript({
+        scriptProps: { onload } as any,
+        inlineScript: ''
+      });
+
+      const script = document.head.getElementsByTagName('script')[0];
+      script.dispatchEvent(new Event('load'));
+
+      expect(onload).toHaveBeenCalledTimes(1);
+    });
+
+    it('onerror fires when the error event is dispatched', () => {
+      const onerror = vi.fn();
+
+      loadScript({
+        scriptProps: { onerror } as any,
+        inlineScript: ''
+      });
+
+      const script = document.head.getElementsByTagName('script')[0];
+      expect(script.onerror).toBe(onerror);
+      expect(script.getAttribute('onerror')).toBeNull();
+
+      script.dispatchEvent(new Event('error'));
+      expect(onerror).toHaveBeenCalledTimes(1);
+    });
+
+    it('still sets string attributes alongside an event handler', () => {
+      const onload = vi.fn();
+
+      loadScript({
+        scriptProps: {
+          src: 'https://example.com/script.js',
+          onload
+        } as any,
+        inlineScript: ''
+      });
+
+      const script = document.head.getElementsByTagName('script')[0];
+      expect(script.getAttribute('src')).toBe('https://example.com/script.js');
+      expect(script.onload).toBe(onload);
+    });
   });
 });

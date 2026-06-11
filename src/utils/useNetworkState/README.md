@@ -1,6 +1,6 @@
 # useNetworkState
 
-Hook for monitoring network connectivity status. Detects when the user goes online or offline and provides current connection state.
+Hook for monitoring network connection state and quality. Returns an object with online/offline status plus connection-quality metrics from the Network Information API when available.
 
 ## Usage
 
@@ -8,11 +8,11 @@ Hook for monitoring network connectivity status. Detects when the user goes onli
 import { useNetworkState } from 'reactilities';
 
 function NetworkIndicator() {
-  const isOnline = useNetworkState();
-  
+  const { online } = useNetworkState();
+
   return (
     <div>
-      Status: {isOnline ? '🟢 Online' : '🔴 Offline'}
+      Status: {online ? '🟢 Online' : '🔴 Offline'}
     </div>
   );
 }
@@ -20,13 +20,31 @@ function NetworkIndicator() {
 
 ## API
 
+### Signature
+
+```ts
+function useNetworkState(defaultState?: Partial<NetworkState>): NetworkState
+```
+
 ### Parameters
 
-None
+- **`defaultState`** (`Partial<NetworkState>`, optional) - Overrides for the server/initial snapshot. Used during SSR and the first (hydration) client render before real `navigator` values are available. Merged over the built-in default (`online: true`, all connection fields `undefined`).
 
 ### Returns
 
-`boolean` - `true` if online, `false` if offline
+`NetworkState` - An object with the following fields:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `online` | `boolean` | `true` if the browser reports an online connection (`navigator.onLine`). |
+| `downlink` | `number \| undefined` | Estimated effective bandwidth in Mbps. |
+| `downlinkMax` | `number \| undefined` | Maximum downlink speed in Mbps for the underlying connection technology. |
+| `effectiveType` | `'slow-2g' \| '2g' \| '3g' \| '4g' \| undefined` | Effective connection type. |
+| `rtt` | `number \| undefined` | Estimated round-trip time in milliseconds. |
+| `saveData` | `boolean \| undefined` | Whether the user has requested reduced data usage. |
+| `type` | `'bluetooth' \| 'cellular' \| 'ethernet' \| 'none' \| 'wifi' \| 'wimax' \| 'other' \| 'unknown' \| undefined` | Underlying connection technology. |
+
+> Connection-quality fields (everything except `online`) come from the Network Information API and are `undefined` in browsers that do not support it.
 
 ## Examples
 
@@ -34,11 +52,11 @@ None
 
 ```tsx
 function App() {
-  const isOnline = useNetworkState();
-  
+  const { online } = useNetworkState();
+
   return (
     <div>
-      {!isOnline && (
+      {!online && (
         <div className="offline-banner">
           ⚠️ You are currently offline. Some features may be unavailable.
         </div>
@@ -49,24 +67,56 @@ function App() {
 }
 ```
 
+### Connection Quality Details
+
+```tsx
+function NetworkStatus() {
+  const network = useNetworkState();
+
+  return (
+    <div>
+      <p>Status: {network.online ? 'Online' : 'Offline'}</p>
+      <p>Connection: {network.effectiveType ?? 'unknown'}</p>
+      <p>Downlink: {network.downlink ?? '?'} Mbps</p>
+      <p>RTT: {network.rtt ?? '?'}ms</p>
+      {network.saveData && <p>Data Saver: Enabled</p>}
+    </div>
+  );
+}
+```
+
 ### Conditional Data Fetching
 
 ```tsx
 function DataLoader() {
-  const isOnline = useNetworkState();
+  const { online } = useNetworkState();
   const [data, setData] = useState(null);
-  
+
   useEffect(() => {
-    if (isOnline) {
+    if (online) {
       fetchData().then(setData);
     }
-  }, [isOnline]);
-  
-  if (!isOnline) {
+  }, [online]);
+
+  if (!online) {
     return <div>Please connect to the internet to load data</div>;
   }
-  
+
   return <div>{data}</div>;
+}
+```
+
+### Adapting to Connection Quality
+
+```tsx
+function MediaView() {
+  const { online, effectiveType, saveData } = useNetworkState();
+
+  if (!online) return <OfflineMessage />;
+
+  const useLowBandwidth = saveData || effectiveType === 'slow-2g' || effectiveType === '2g';
+
+  return useLowBandwidth ? <LowBandwidthUI /> : <FullUI />;
 }
 ```
 
@@ -74,16 +124,16 @@ function DataLoader() {
 
 ```tsx
 function SyncManager() {
-  const isOnline = useNetworkState();
+  const { online } = useNetworkState();
   const [pendingChanges, setPendingChanges] = useState([]);
-  
+
   useEffect(() => {
-    if (isOnline && pendingChanges.length > 0) {
+    if (online && pendingChanges.length > 0) {
       syncChanges(pendingChanges)
         .then(() => setPendingChanges([]));
     }
-  }, [isOnline, pendingChanges]);
-  
+  }, [online, pendingChanges]);
+
   return (
     <div>
       {pendingChanges.length > 0 && (
@@ -94,17 +144,29 @@ function SyncManager() {
 }
 ```
 
+### Custom Server Default
+
+```tsx
+// Assume offline on the server so the offline UI is rendered until hydration.
+function App() {
+  const { online } = useNetworkState({ online: false });
+  // ...
+}
+```
+
 ## Features
 
 - ✅ Real-time connectivity monitoring
+- ✅ Connection-quality metrics via the Network Information API
 - ✅ Automatic event listener management
-- ✅ SSR-safe
+- ✅ SSR-safe (returns a stable default snapshot during server render and hydration; no throw, no hydration mismatch)
+- ✅ Optional `defaultState` override
 - ✅ TypeScript support
-- ✅ Lightweight
 
 ## Notes
 
-- Uses `navigator.onLine` API
-- Listens to `online` and `offline` events
-- Initial state is determined on mount
-- Automatically cleans up event listeners
+- Built on `useSyncExternalStore` for tear-free reads.
+- Uses `navigator.onLine` for `online` and the Network Information API (`navigator.connection` and vendor-prefixed variants) for the quality fields.
+- Listens to window `online`/`offline` events and the connection `change` event.
+- During SSR and the first client render, the returned snapshot is `DEFAULT_SERVER_STATE` (`online: true` with connection fields `undefined`), optionally merged with `defaultState`. Real `navigator` values are read after mount.
+- Automatically cleans up all event listeners on unmount.

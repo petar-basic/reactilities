@@ -9,7 +9,13 @@ import { useEffect } from "react";
  * callbacks. Because the name does not start with `use`, ESLint's
  * react-hooks plugin will not enforce these rules automatically.
  *
- * @param func - Function to execute after component mounts
+ * If `func` returns a function, that function is treated as a cleanup and is
+ * invoked when the component unmounts — mirroring `useEffect`'s cleanup
+ * contract. This lets you port `useEffect(() => { ...; return cleanup; }, [])`
+ * code without silently leaking subscriptions, timers, or listeners.
+ *
+ * @param func - Function to execute after component mounts. May optionally
+ *   return a cleanup function to run on unmount.
  *
  * @example
  * function MyComponent() {
@@ -23,12 +29,24 @@ import { useEffect } from "react";
  * }
  *
  * @example
+ * // Set up and tear down a subscription
+ * componentDidMount(() => {
+ *   const id = setInterval(tick, 1000);
+ *   return () => clearInterval(id);
+ * });
+ *
+ * @example
  * // Initialize analytics
  * componentDidMount(() => {
  *   analytics.track('page_view', { page: 'home' });
  * });
  */
 export function componentDidMount<T>(func: () => T): void {
-    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/exhaustive-deps
-    useEffect(() => { func() }, []);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+        const ret = func();
+        return typeof ret === 'function' ? (ret as () => void) : undefined;
+        // run once on mount; func is intentionally captured at mount time
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 }

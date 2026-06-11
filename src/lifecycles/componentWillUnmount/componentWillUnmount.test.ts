@@ -53,6 +53,45 @@ describe('componentWillUnmount', () => {
     expect(mockFn).toHaveBeenCalledTimes(1);
   });
 
+  it('should invoke the LATEST callback on unmount, not the first-render one', () => {
+    // Simulate a callback that closes over a changing state/prop value.
+    // The hook is called every render with a fresh closure; the cleanup
+    // must observe the most recent value, not the one captured at mount.
+    let observed: string | undefined;
+
+    const { rerender, unmount } = renderHook(
+      ({ value }: { value: string }) =>
+        componentWillUnmount(() => {
+          observed = value;
+        }),
+      { initialProps: { value: 'initial' } }
+    );
+
+    rerender({ value: 'updated' });
+    rerender({ value: 'latest' });
+
+    expect(observed).toBeUndefined();
+
+    unmount();
+
+    expect(observed).toBe('latest');
+  });
+
+  it('should run the cleanup exactly once on unmount, even after re-renders', () => {
+    const mockFn = vi.fn();
+
+    const { rerender, unmount } = renderHook(() => componentWillUnmount(mockFn));
+
+    rerender();
+    rerender();
+
+    expect(mockFn).not.toHaveBeenCalled();
+
+    unmount();
+
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+
   it('should handle event listener cleanup', () => {
     const removeEventListener = vi.fn();
     const mockFn = vi.fn(() => {

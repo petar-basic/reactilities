@@ -25,7 +25,7 @@ import { useEffect, useRef } from "react";
  *   return <table>...</table>;
  * }
  */
-export function useLogger(componentName: string, props: Record<string, unknown>): void {
+export function useLogger<P extends object>(componentName: string, props?: P): void {
   const isFirstRender = useRef(true);
   const prevPropsRef = useRef(props);
 
@@ -35,11 +35,13 @@ export function useLogger(componentName: string, props: Record<string, unknown>)
       console.log(`[${componentName}] Mounted`, props);
     } else {
       const changed: Record<string, unknown> = {};
-      const allKeys = new Set([...Object.keys(prevPropsRef.current), ...Object.keys(props)]);
+      const prev = (prevPropsRef.current ?? {}) as Record<string, unknown>;
+      const next = (props ?? {}) as Record<string, unknown>;
+      const allKeys = new Set([...Object.keys(prev), ...Object.keys(next)]);
 
       for (const key of allKeys) {
-        if (prevPropsRef.current[key] !== props[key]) {
-          changed[key] = props[key];
+        if (prev[key] !== next[key]) {
+          changed[key] = next[key];
         }
       }
 
@@ -51,6 +53,10 @@ export function useLogger(componentName: string, props: Record<string, unknown>)
   useEffect(() => {
     return () => {
       console.log(`[${componentName}] Unmounted`);
+      // Reset the first-render flag so a StrictMode dev remount (refs persist
+      // across the simulated mount/cleanup/remount) logs `Mounted` again and
+      // does not emit a phantom `Updated … changed: {}`.
+      isFirstRender.current = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -1,4 +1,4 @@
-import { useRef, useSyncExternalStore } from "react";
+import { useMemo, useRef, useSyncExternalStore } from "react";
 
 declare global {
   interface Navigator {
@@ -80,8 +80,14 @@ const subscribe = (callback: () => void) => {
   };
 };
 
-const getServerSnapshot = () => {
-  throw Error("useNetworkState is a client-only hook");
+const DEFAULT_SERVER_STATE: NetworkState = {
+  online: true,
+  downlink: undefined,
+  downlinkMax: undefined,
+  effectiveType: undefined,
+  rtt: undefined,
+  saveData: undefined,
+  type: undefined,
 };
 
 /**
@@ -89,8 +95,16 @@ const getServerSnapshot = () => {
  * Provides online/offline status and detailed connection information
  * Uses Network Information API when available for connection quality metrics
  * 
+ * SSR-safe: during server render and the first client (hydration) render it
+ * returns a stable default snapshot (`online: true` with connection fields
+ * undefined) so it never throws and never causes a hydration mismatch. Real
+ * `navigator` values are read after mount.
+ *
+ * @param defaultState - Optional server/initial snapshot override. Used by
+ *   `getServerSnapshot` during SSR/hydration before the real network state is
+ *   available on the client.
  * @returns Object containing network state information
- * 
+ *
  * @example
  * function NetworkStatus() {
  *   const network = useNetworkState();
@@ -119,8 +133,18 @@ const getServerSnapshot = () => {
  *   );
  * }
  */
-export function useNetworkState(): NetworkState {
+export function useNetworkState(defaultState?: Partial<NetworkState>): NetworkState {
   const cache = useRef<NetworkState | null>(null);
+
+  // Stable across renders so getServerSnapshot returns a referentially equal
+  // value (useSyncExternalStore requires this to stay tear-free).
+  const serverSnapshot = useMemo<NetworkState>(
+    () => (defaultState ? { ...DEFAULT_SERVER_STATE, ...defaultState } : DEFAULT_SERVER_STATE),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const getServerSnapshot = () => serverSnapshot;
 
   const getSnapshot = () => {
     const online = navigator.onLine;

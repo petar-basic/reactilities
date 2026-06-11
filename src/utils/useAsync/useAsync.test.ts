@@ -108,4 +108,60 @@ describe('useAsync', () => {
     await waitFor(() => expect(result.current.status).toBe('success'));
     expect(result.current.data).toEqual(user);
   });
+
+  // BUG 2 (isolated): an AbortError from the LATEST, still-mounted request must
+  // be swallowed, not surfaced as error state. Here there is no newer execute()
+  // and the hook stays mounted, so the request-id/mounted guards do NOT apply —
+  // only the explicit isAbortError check prevents the error dispatch.
+  // Mutation-proof: remove `if (isAbortError(err)) return;` and the loading
+  // state flips to 'error', failing the assertions below.
+  it('should swallow AbortError from the latest request without erroring', async () => {
+    let reject: ((reason: unknown) => void) | undefined;
+    const asyncFn = vi.fn().mockReturnValue(
+      new Promise<string>((_, r) => { reject = r; })
+    );
+
+    const { result } = renderHook(() => useAsync(asyncFn, false));
+
+    act(() => { result.current.execute(); });
+    expect(result.current.status).toBe('loading');
+
+    await act(async () => {
+      reject?.(new DOMException('The operation was aborted.', 'AbortError'));
+      await Promise.resolve();
+    });
+
+    expect(result.current.status).toBe('loading');
+    expect(result.current.error).toBeNull();
+  });
+
+  // BUG 3: out-of-order results. A slower, OLDER execute() must not overwrite a
+  // newer one's result. Mutation-proof: without the request-id guard in
+  // useAsync, resolving the first (older) call AFTER the second (newer) call
+  // dispatches 'first', so the final data would be 'first' instead of 'second'.
+  it('should ignore an older execute() result that resolves after a newer one', async () => {
+    let resolveFirst: ((value: string) => void) | undefined;
+    let resolveSecond: ((value: string) => void) | undefined;
+
+    const asyncFn = vi
+      .fn()
+      .mockReturnValueOnce(new Promise<string>(r => { resolveFirst = r; }))
+      .mockReturnValueOnce(new Promise<string>(r => { resolveSecond = r; }));
+
+    const { result } = renderHook(() => useAsync(asyncFn, false));
+
+    // Kick off two overlapping executions.
+    act(() => { result.current.execute(); });
+    act(() => { result.current.execute(); });
+
+    // Resolve the NEWER (second) one first -> it wins.
+    await act(async () => { resolveSecond?.('second'); });
+    expect(result.current.data).toBe('second');
+
+    // Now resolve the OLDER (first) one late -> it must be ignored.
+    await act(async () => { resolveFirst?.('first'); });
+
+    expect(result.current.status).toBe('success');
+    expect(result.current.data).toBe('second');
+  });
 });

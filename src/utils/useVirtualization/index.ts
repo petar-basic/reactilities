@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface UseVirtualizationOptions {
   itemHeight: number;
@@ -14,8 +14,16 @@ interface VirtualItem {
   size: number;
 }
 
-interface UseVirtualizationReturn {
-  containerRef: RefObject<HTMLElement | null>;
+/**
+ * Callback ref for the scroll container. Assign it directly to an element's
+ * `ref` prop (e.g. `<div ref={containerRef}>`). Because it is a callback ref,
+ * the scroll subscription follows the actual DOM node even when the container
+ * is mounted later or swapped out.
+ */
+type ContainerRef<T extends HTMLElement> = (node: T | null) => void;
+
+interface UseVirtualizationReturn<T extends HTMLElement> {
+  containerRef: ContainerRef<T>;
   virtualItems: VirtualItem[];
   totalSize: number;
   scrollToIndex: (index: number) => void;
@@ -31,14 +39,14 @@ interface UseVirtualizationReturn {
  * @returns Object with containerRef, virtual items, total size, and scroll utilities
  *
  * @example
- * const { containerRef, virtualItems, totalSize, scrollToIndex } = useVirtualization(10000, {
+ * const { containerRef, virtualItems, totalSize, scrollToIndex } = useVirtualization<HTMLDivElement>(10000, {
  *   itemHeight: 50,
  *   containerHeight: 400,
  *   overscan: 5
  * });
  *
  * return (
- *   <div ref={containerRef} style={{ height: containerHeight, overflow: 'auto' }}>
+ *   <div ref={containerRef} style={{ height: 400, overflow: 'auto' }}>
  *     <div style={{ height: totalSize, position: 'relative' }}>
  *       {virtualItems.map(item => (
  *         <div
@@ -57,10 +65,10 @@ interface UseVirtualizationReturn {
  *   </div>
  * );
  */
-export function useVirtualization(
+export function useVirtualization<T extends HTMLElement = HTMLDivElement>(
   itemCount: number,
   options: UseVirtualizationOptions
-): UseVirtualizationReturn {
+): UseVirtualizationReturn<T> {
   const {
     itemHeight,
     containerHeight,
@@ -68,9 +76,20 @@ export function useVirtualization(
     scrollingDelay = 150
   } = options;
 
-  const containerRef = useRef<HTMLElement | null>(null);
+  // State-backed container node so the scroll subscription re-runs whenever the
+  // actual DOM element is attached, swapped, or removed (e.g. conditional render).
+  const [container, setContainer] = useState<T | null>(null);
+  // Keep a synchronous reference too, so scrollToIndex works the moment the node
+  // is attached without waiting for a re-render.
+  const containerNodeRef = useRef<T | null>(null);
+
   const [scrollTop, setScrollTop] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
+
+  const containerRef = useCallback<ContainerRef<T>>((node) => {
+    containerNodeRef.current = node;
+    setContainer(node);
+  }, []);
 
   const totalSize = itemCount * itemHeight;
 
@@ -98,12 +117,14 @@ export function useVirtualization(
     const targetScrollTop = index * itemHeight;
     setScrollTop(targetScrollTop);
 
-    if (containerRef.current) {
-      containerRef.current.scrollTop = targetScrollTop;
+    if (containerNodeRef.current) {
+      containerNodeRef.current.scrollTop = targetScrollTop;
     }
   }, [itemHeight]);
 
   useEffect(() => {
+    if (!container) return;
+
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const handleScroll = (event: Event) => {
@@ -117,16 +138,13 @@ export function useVirtualization(
       }, scrollingDelay);
     };
 
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
+    container.addEventListener('scroll', handleScroll, { passive: true });
 
-      return () => {
-        container.removeEventListener('scroll', handleScroll);
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [scrollingDelay]);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeoutId);
+    };
+  }, [container, scrollingDelay]);
 
   return {
     containerRef,

@@ -11,7 +11,7 @@ function Feed() {
   const [items, setItems] = useState<Post[]>([]);
   const [hasMore, setHasMore] = useState(true);
 
-  const { loaderRef, isLoading } = useInfiniteScroll({
+  const { loaderRef, isLoading } = useInfiniteScroll<HTMLDivElement>({
     onLoadMore: async () => {
       const next = await fetchPosts({ cursor: items.at(-1)?.id });
       setItems(prev => [...prev, ...next]);
@@ -46,11 +46,13 @@ function Feed() {
 | `threshold` | `number` | `0.1` | IntersectionObserver threshold (0–1) |
 | `rootMargin` | `string` | `'0px'` | IntersectionObserver root margin |
 
+The hook is generic over the sentinel element type: `useInfiniteScroll<T extends HTMLElement = HTMLElement>(...)`. Pass the element type (e.g. `HTMLDivElement`) so `loaderRef` assigns to your element without casting.
+
 ### Returns
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `loaderRef` | `RefObject<HTMLElement \| null>` | Attach to the sentinel/loader element |
+| `loaderRef` | `RefCallback<T \| null>` | Callback ref to attach to the sentinel/loader element (attaches even if the sentinel mounts later) |
 | `isLoading` | `boolean` | True while an async `onLoadMore` is in progress |
 
 ## Examples
@@ -97,7 +99,7 @@ const { loaderRef } = useInfiniteScroll({
 
 ## Notes
 
-- `onLoadMore` is deduplicated — it won't be called again while `isLoading` is true
+- `onLoadMore` is deduplicated with a synchronous in-flight guard — back-to-back intersections (scroll jitter, slow render) before the loading state commits will only trigger a single load; a fresh intersection after the load resolves can load again
 - Always uses the latest `onLoadMore` reference (via ref pattern), so closures stay fresh
 - When `hasMore` becomes false, remove or stop rendering the sentinel element to clean up
 - The IntersectionObserver is disconnected on unmount

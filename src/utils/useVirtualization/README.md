@@ -8,7 +8,7 @@ Hook for virtualizing large lists to improve performance. Only renders visible i
 import { useVirtualization } from 'reactilities';
 
 function VirtualList({ items }) {
-  const { containerRef, virtualItems, totalSize, scrollToIndex } = useVirtualization(
+  const { containerRef, virtualItems, totalSize, scrollToIndex } = useVirtualization<HTMLDivElement>(
     items.length,
     { itemHeight: 50, containerHeight: 600 }
   );
@@ -52,7 +52,7 @@ function VirtualList({ items }) {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `containerRef` | `RefObject<HTMLElement \| null>` | Attach to the scroll container element |
+| `containerRef` | `(node: T \| null) => void` | Callback ref — attach to the scroll container element (`<div ref={containerRef}>`). The hook is generic over the element type, defaulting to `HTMLDivElement` |
 | `virtualItems` | `VirtualItem[]` | Array of currently visible items |
 | `totalSize` | `number` | Total pixel height of all items combined |
 | `scrollToIndex` | `(index: number) => void` | Programmatically scroll to an item |
@@ -81,7 +81,7 @@ function ProductList() {
     price: Math.random() * 100
   }));
 
-  const { containerRef, virtualItems, totalSize } = useVirtualization(
+  const { containerRef, virtualItems, totalSize } = useVirtualization<HTMLDivElement>(
     products.length,
     { itemHeight: 60, containerHeight: 500 }
   );
@@ -111,7 +111,7 @@ function ProductList() {
 
 ```tsx
 function VirtualListWithNav({ items }) {
-  const { containerRef, virtualItems, totalSize, scrollToIndex } = useVirtualization(
+  const { containerRef, virtualItems, totalSize, scrollToIndex } = useVirtualization<HTMLDivElement>(
     items.length,
     { itemHeight: 50, containerHeight: 400 }
   );
@@ -136,7 +136,7 @@ function VirtualListWithNav({ items }) {
 ## Features
 
 - Only renders visible items + overscan buffer
-- `containerRef` API — no data attributes needed
+- `containerRef` callback-ref API — works even when the container mounts later or is conditionally rendered
 - `scrollToIndex` with stable reference (via `useCallback`)
 - `isScrolling` state for scroll-aware UI
 - TypeScript support

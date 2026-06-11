@@ -35,7 +35,7 @@ function Menu({ items }: { items: string[] }) {
 | Function | Returns | Description |
 |---|---|---|
 | `getContainerProps()` | `{ onKeyDown }` | Props to spread onto the container element |
-| `getItemProps(index)` | `{ tabIndex, ref }` | Props to spread onto each navigable item |
+| `getItemProps(index)` | `{ tabIndex, onFocus, ref }` | Props to spread onto each navigable item — `onFocus` keeps the focused index in sync when focus is set externally (e.g. via click) |
 
 ## Examples
 

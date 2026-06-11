@@ -27,16 +27,18 @@ function HeavyComputation() {
 
 ### Parameters
 
-- **`fn`** (`(...args: unknown[]) => T`) - A **self-contained** function to run in the worker. Must not reference variables from the outer scope.
+- **`fn`** (`(...args: TArgs) => TResult`) - A **self-contained** function to run in the worker. Must not reference variables from the outer scope. Its parameter and return types are inferred and fully preserved — keep your parameter types and `run()` is type-checked against them, and `result` is typed as `TResult | null`.
 
 ### Returns
 
+`useWorker` infers two type parameters from `fn`: `TArgs` (its argument tuple) and `TResult` (its return type).
+
 | Property | Type | Description |
 |---|---|---|
-| `result` | `T \| null` | The return value of the last successful run |
+| `result` | `TResult \| null` | The return value of the last successful run |
 | `error` | `Error \| null` | The error from the last failed run |
 | `status` | `'idle' \| 'running' \| 'success' \| 'error'` | Current worker status |
-| `run` | `(...args: unknown[]) => void` | Start the worker with the given arguments |
+| `run` | `(...args: TArgs) => void` | Start the worker with the given arguments (type-checked against `fn`) |
 | `terminate` | `() => void` | Stop the current worker and reset status to `idle` |
 
 ## Examples
@@ -54,7 +56,7 @@ function SortButton({ data }: { data: number[] }) {
       <button onClick={() => run(data)} disabled={status === 'running'}>
         {status === 'running' ? 'Sorting...' : 'Sort'}
       </button>
-      {status === 'success' && <p>First: {(result as number[])[0]}</p>}
+      {status === 'success' && result && <p>First: {result[0]}</p>}
     </div>
   );
 }
@@ -97,7 +99,7 @@ function FibCalculator() {
     <div>
       <button onClick={() => run(42)}>Calculate fib(42)</button>
       {status === 'running' && <p>Computing... UI stays responsive!</p>}
-      {status === 'success' && <p>fib(42) = {result as number}</p>}
+      {status === 'success' && <p>fib(42) = {result}</p>}
     </div>
   );
 }

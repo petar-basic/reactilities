@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useUpdateEffect } from '../useUpdateEffect'
@@ -58,5 +59,31 @@ describe('useUpdateEffect', () => {
     unmount()
 
     expect(cleanup).toHaveBeenCalled()
+  })
+
+  // Mutation-proof regression test for the StrictMode mount bug.
+  // In React 18+ StrictMode (dev), mount effects run effect → cleanup → effect.
+  // The previous implementation flipped its "mounted" flag on the first pass
+  // and never reset it (its cleanup was undefined), so the second pass fired
+  // `effect()` on initial mount — the exact behavior this hook must prevent.
+  // StrictMode is simulated by wrapping the hook in <StrictMode>, which makes
+  // React double-invoke effects with a cleanup in between, matching dev mount.
+  it('should not run effect on initial mount under StrictMode', () => {
+    const effect = vi.fn()
+    renderHook(() => useUpdateEffect(effect, []), { wrapper: StrictMode })
+    expect(effect).not.toHaveBeenCalled()
+  })
+
+  it('should run effect on dependency change under StrictMode', () => {
+    const effect = vi.fn()
+    const { rerender } = renderHook(
+      ({ value }) => useUpdateEffect(effect, [value]),
+      { initialProps: { value: 1 }, wrapper: StrictMode }
+    )
+
+    expect(effect).not.toHaveBeenCalled()
+
+    rerender({ value: 2 })
+    expect(effect).toHaveBeenCalledTimes(1)
   })
 })

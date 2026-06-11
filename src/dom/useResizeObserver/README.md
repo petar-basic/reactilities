@@ -26,10 +26,12 @@ function ResponsiveChart() {
 
 | Property  | Type                            | Description                                     |
 |-----------|---------------------------------|-------------------------------------------------|
-| `ref`     | `RefObject<T \| null>`          | Attach to the element you want to observe       |
+| `ref`     | `UseResizeObserverRef<T>`       | Attach to the element you want to observe (`<div ref={ref} />`) |
 | `width`   | `number`                        | Current `contentRect.width` (0 before first observation) |
 | `height`  | `number`                        | Current `contentRect.height` (0 before first observation) |
 | `entry`   | `UseResizeObserverEntry \| undefined` | Full entry for advanced usage (borderBoxSize, etc.) |
+
+`UseResizeObserverRef<T>` is a callback ref (`(node: T \| null) => void`) that also exposes `.current` for `RefObject`-style reads. Because it is a callback ref, the observer disconnects/re-observes whenever the target node changes — including late-mounted elements and elements that are replaced.
 
 ### Type parameter
 

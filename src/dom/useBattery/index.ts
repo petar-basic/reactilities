@@ -32,6 +32,11 @@ const BATTERY_EVENTS = ['chargingchange', 'chargingtimechange', 'dischargingtime
  * State updates are suppressed if the component unmounts before getBattery resolves
  * Useful in PWAs and mobile-first apps to adapt behavior on low battery
  *
+ * `isSupported` starts as `false` and resolves to its real value after mount
+ * (inside an effect). This keeps the server render and the client's first
+ * render in agreement, avoiding React hydration mismatches in SSR frameworks
+ * such as Next.js. Expect one post-mount re-render when support is detected.
+ *
  * @returns Object with battery state and isSupported flag
  *
  * @example
@@ -56,11 +61,16 @@ const BATTERY_EVENTS = ['chargingchange', 'chargingtimechange', 'dischargingtime
  * if (isLowBattery) disableAutoPlay();
  */
 export function useBattery(): UseBatteryReturn {
-  const [isSupported] = useState(() => typeof navigator !== 'undefined' && typeof (navigator as Navigator & { getBattery?: unknown }).getBattery === 'function');
+  // Start `false` so server render and the client's first render agree.
+  // The real value is resolved after mount inside the effect below.
+  const [isSupported, setIsSupported] = useState(false);
   const [battery, setBattery] = useState<BatteryState>(DEFAULT_STATE);
 
   useEffect(() => {
-    if (!isSupported) return;
+    const supported = typeof navigator !== 'undefined' && typeof (navigator as Navigator & { getBattery?: unknown }).getBattery === 'function';
+    setIsSupported(supported);
+
+    if (!supported) return;
 
     let batteryManager: BatteryManager | null = null;
 
@@ -92,7 +102,7 @@ export function useBattery(): UseBatteryReturn {
       cancelled = true;
       BATTERY_EVENTS.forEach(event => batteryManager?.removeEventListener(event, update));
     };
-  }, [isSupported]);
+  }, []);
 
   return { isSupported, ...battery };
 }

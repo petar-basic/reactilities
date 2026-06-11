@@ -11,6 +11,7 @@ interface ChangedEntry {
  * Hook for debugging unnecessary re-renders by logging which props or state values changed
  * On every render after the first, compares current values with previous and logs the diff
  * Skips all work in production builds (process.env.NODE_ENV === 'production')
+ * Falls back to dev behavior (and never throws) when `process` is undefined, e.g. bundler-less ESM
  * Remove this hook before shipping — it is a development-only debugging aid
  *
  * @param componentName - Label to identify the component in log output
@@ -35,7 +36,7 @@ export function useWhyDidYouRender(componentName: string, values: TrackedValues)
   const previousRef = useRef<TrackedValues | null>(null);
 
   useEffect(() => {
-    if (process.env.NODE_ENV === 'production') return;
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') return;
 
     if (previousRef.current === null) {
       previousRef.current = values;

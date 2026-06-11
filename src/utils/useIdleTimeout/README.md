@@ -23,7 +23,7 @@ function App() {
 ### Parameters
 
 - **`options.timeout`** (`number`) - Time in milliseconds of inactivity before considered idle
-- **`options.events`** (`string[]`) - DOM events that count as activity (default: `['mousemove', 'mousedown', 'keypress', 'touchmove', 'scroll', 'click']`)
+- **`options.events`** (`string[]`) - DOM events that count as activity (default: `['mousemove', 'mousedown', 'keydown', 'touchstart', 'touchmove', 'scroll', 'wheel', 'click']`)
 - **`options.onIdle`** (`() => void`) - Callback fired when the user becomes idle
 - **`options.onActive`** (`() => void`) - Callback fired when the user returns from idle
 

@@ -68,6 +68,69 @@ describe('useDragAndDrop', () => {
     expect(result.current.isDragging).toBe(false)
   })
 
+  it('should not stick isDragging true after a stray dragleave following a drop', () => {
+    const { result } = renderHook(() => useDragAndDrop())
+    const props = result.current.getRootProps()
+
+    // Enter then drop — drop resets the counter to 0 and clears isDragging.
+    act(() => {
+      props.onDragEnter(makeDragEvent())
+    })
+    act(() => {
+      props.onDrop(makeDragEvent())
+    })
+    expect(result.current.isDragging).toBe(false)
+
+    // A stray dragleave arrives after the drop. With a `=== 0` check this would
+    // drive the counter to -1, so the next genuine enter/leave cycle could never
+    // bring it back to exactly 0 and isDragging would stay stuck true.
+    act(() => {
+      props.onDragLeave(makeDragEvent())
+    })
+    expect(result.current.isDragging).toBe(false)
+
+    // A subsequent normal enter/leave must still toggle correctly. If the counter
+    // were wedged at -1 (mutation: `=== 0`), this leave would leave it at -1 and
+    // isDragging would remain true — this assertion fails under that mutation.
+    act(() => {
+      props.onDragEnter(makeDragEvent())
+    })
+    expect(result.current.isDragging).toBe(true)
+
+    act(() => {
+      props.onDragLeave(makeDragEvent())
+    })
+    expect(result.current.isDragging).toBe(false)
+  })
+
+  it('should not stick isDragging true after an extra unbalanced dragleave', () => {
+    const { result } = renderHook(() => useDragAndDrop())
+    const props = result.current.getRootProps()
+
+    // One enter, two leaves: the extra leave must not push the counter negative.
+    act(() => {
+      props.onDragEnter(makeDragEvent())
+    })
+    act(() => {
+      props.onDragLeave(makeDragEvent())
+    })
+    act(() => {
+      props.onDragLeave(makeDragEvent()) // stray/unbalanced leave
+    })
+    expect(result.current.isDragging).toBe(false)
+
+    // Next enter/leave still toggles — proves the counter was clamped to 0, not -1.
+    act(() => {
+      props.onDragEnter(makeDragEvent())
+    })
+    expect(result.current.isDragging).toBe(true)
+
+    act(() => {
+      props.onDragLeave(makeDragEvent())
+    })
+    expect(result.current.isDragging).toBe(false)
+  })
+
   it('should call preventDefault on drag over', () => {
     const { result } = renderHook(() => useDragAndDrop())
     const event = makeDragEvent()

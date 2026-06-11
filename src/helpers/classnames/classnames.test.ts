@@ -11,7 +11,8 @@ describe('classnames', () => {
   it('should handle number arguments', () => {
     expect(classnames(1)).toBe('1')
     expect(classnames('foo', 2, 'bar')).toBe('foo 2 bar')
-    expect(classnames(0)).toBe('0')
+    // clsx omits the falsy number 0
+    expect(classnames(0)).toBe('')
   })
 
   it('should handle boolean arguments', () => {
@@ -76,6 +77,46 @@ describe('classnames', () => {
       null,
       'final'
     )).toBe('base active nested highlighted final')
+  })
+
+  // Mutation-proof: these fail on the old implementation which pushed
+  // any string/number via String(cls) and only skipped null/undefined/
+  // false/true. They guarantee clsx-compatible falsy filtering.
+  describe('falsy primitives (clsx-compatible)', () => {
+    it('omits 0 from short-circuit expressions', () => {
+      const count = 0
+      // old code -> 'foo 0'
+      expect(classnames('foo', count && 'bar')).toBe('foo')
+      expect(classnames('foo', 0)).toBe('foo')
+    })
+
+    it('omits NaN instead of emitting the class "NaN"', () => {
+      // old code -> 'foo NaN'
+      expect(classnames('foo', NaN)).toBe('foo')
+      expect(classnames(NaN)).toBe('')
+    })
+
+    it('omits empty strings (no double spaces)', () => {
+      // old code -> 'foo  bar' (double space) / 'foo '
+      expect(classnames('foo', '', 'bar')).toBe('foo bar')
+      expect(classnames('foo', '')).toBe('foo')
+      expect(classnames('')).toBe('')
+    })
+
+    it('omits falsy values nested in arrays', () => {
+      // old code -> 'foo 0  bar NaN'
+      expect(classnames(['foo', 0, '', 'bar', NaN])).toBe('foo bar')
+    })
+
+    it('omits falsy values nested in objects', () => {
+      expect(classnames({ foo: true, bar: 0, baz: NaN, qux: '' })).toBe('foo')
+    })
+
+    it('matches clsx for a mixed bag of falsy values', () => {
+      expect(
+        classnames('a', 0, NaN, '', false, null, undefined, ['b', 0, ['c', '']], { d: true, e: 0 })
+      ).toBe('a b c d')
+    })
   })
 
   describe('aliases', () => {

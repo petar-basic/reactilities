@@ -138,7 +138,7 @@ export function useSpeechRecognition({
       }
     };
 
-    recognition.onstart = () => { isListeningRef.current = true; setIsListening(true); };
+    recognition.onstart = () => { setIsListening(true); };
     recognition.onend = () => { isListeningRef.current = false; setIsListening(false); setInterimTranscript(''); };
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       isListeningRef.current = false;
@@ -147,6 +147,9 @@ export function useSpeechRecognition({
     };
 
     recognitionRef.current = recognition;
+    // Set the guard synchronously (before the async onstart fires) so a second
+    // rapid start() call is rejected and cannot orphan this live session.
+    isListeningRef.current = true;
     recognition.start();
   }, [lang, continuous, interimResults]);
 

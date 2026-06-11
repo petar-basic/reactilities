@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 
 const dispatchStorageEvent = (key: string, newValue: string | null) => {
   window.dispatchEvent(new StorageEvent("storage", { key, newValue }));
@@ -24,14 +24,13 @@ const subscribe = (callback: (event: StorageEvent) => void) => {
   return () => window.removeEventListener("storage", callback);
 };
 
-const getServerSnapshot = () => {
-  throw Error("useSessionStorage is a client-only hook");
-};
-
 /**
  * Hook for managing sessionStorage with React state synchronization
  * Similar to useLocalStorage but data persists only for the browser session
  * Automatically syncs with sessionStorage changes within the same tab
+ *
+ * SSR-safe: renders the initialValue on the server and hydrates from
+ * sessionStorage after mount.
  *
  * @param key - The sessionStorage key to manage
  * @param initialValue - Initial value to use if key doesn't exist
@@ -75,7 +74,15 @@ export function useSessionStorage<T>(key: string, initialValue: T): [T, (value: 
   // passes an object/array literal.
   const initialValueRef = useRef(initialValue);
 
-  const getSnapshot = () => getItem(key);
+  const getSnapshot = useCallback(() => getItem(key), [key]);
+
+  // Server snapshot returns the serialized initialValue (same string shape as
+  // getSnapshot) so the first server render is consistent with client
+  // hydration and never throws. The hook updates from storage after mount.
+  const getServerSnapshot = useCallback(
+    () => JSON.stringify(initialValueRef.current),
+    []
+  );
 
   const store = useSyncExternalStore(
     subscribe,
@@ -86,12 +93,17 @@ export function useSessionStorage<T>(key: string, initialValue: T): [T, (value: 
   const setState = useCallback(
     (valueOrFn: T | ((prevValue: T) => T) | null | undefined) => {
       try {
-        // When the key doesn't exist yet, fall back to initialValue so
-        // functional updates receive a meaningful previous value instead
-        // of throwing from JSON.parse('').
-        const prevValue = store !== null ? JSON.parse(store) : initialValueRef.current;
         const nextState = typeof valueOrFn === "function"
-          ? (valueOrFn as (prevValue: T) => T)(prevValue)
+          // Read the CURRENT storage value fresh (not a captured render-time
+          // snapshot) so that successive functional updates compose correctly.
+          // When the key doesn't exist yet, fall back to initialValue so
+          // functional updates receive a meaningful previous value instead
+          // of throwing from JSON.parse('').
+          ? (() => {
+              const current = getItem(key);
+              const prevValue = current !== null ? JSON.parse(current) : initialValueRef.current;
+              return (valueOrFn as (prevValue: T) => T)(prevValue);
+            })()
           : valueOrFn;
 
         if (nextState === undefined || nextState === null) {
@@ -103,7 +115,7 @@ export function useSessionStorage<T>(key: string, initialValue: T): [T, (value: 
         console.warn('Error setting sessionStorage:', e);
       }
     },
-    [key, store]
+    [key]
   );
 
   useEffect(() => {
@@ -116,14 +128,18 @@ export function useSessionStorage<T>(key: string, initialValue: T): [T, (value: 
     }
   }, [key]);
 
-  const parsedValue = (() => {
-    if (!store) return initialValue;
+  // Memoize the parse on the snapshot string so non-primitive values keep a
+  // stable identity across renders when nothing in storage changed. Without
+  // this, every render produces a new object/array reference, which makes
+  // consumer effects depending on the value fire on every render.
+  const parsedValue = useMemo<T>(() => {
+    if (store === null) return initialValueRef.current;
     try {
       return JSON.parse(store);
     } catch {
-      return initialValue;
+      return initialValueRef.current;
     }
-  })();
+  }, [store]);
 
   return [parsedValue, setState];
 }

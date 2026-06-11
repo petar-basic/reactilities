@@ -121,4 +121,17 @@ describe('useScrollTo', () => {
     expect(result.current.scrollToElement).toBe(scrollToElement)
     expect(result.current.scrollTo).toBe(scrollTo)
   })
+
+  it('should return a stable object reference across re-renders', () => {
+    const { result, rerender } = renderHook(() => useScrollTo())
+    const first = result.current
+
+    rerender()
+    rerender()
+
+    // The whole returned object must keep the same identity so consumers
+    // passing it through props/context/deps don't re-render on every render.
+    expect(Object.is(result.current, first)).toBe(true)
+    expect(result.current).toBe(first)
+  })
 })

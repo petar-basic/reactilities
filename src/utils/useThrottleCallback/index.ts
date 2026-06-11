@@ -45,6 +45,12 @@ export function useThrottleCallback<T extends (...args: any[]) => any>(
       const now = Date.now();
 
       if (lastCalledRef.current === null || now >= lastCalledRef.current + interval) {
+        // Cancel any pending trailing timer before invoking on the leading edge.
+        // Without this, a trailing timer scheduled during the throttle window could
+        // fire right after this immediate call, double-invoking the callback near
+        // the interval boundary (matches lodash.throttle behavior).
+        clearTimeout(timerRef.current);
+        timerRef.current = undefined;
         lastCalledRef.current = now;
         callbackRef.current(...args);
       } else {

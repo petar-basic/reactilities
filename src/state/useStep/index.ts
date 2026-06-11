@@ -45,28 +45,34 @@ interface UseStepReturn {
  * <button onClick={() => goTo(0)}>Restart</button>
  */
 export function useStep(totalSteps: number, initialStep = 0): UseStepReturn {
-  const [step, setStep] = useState(initialStep);
+  // Highest valid (0-based) step index. Guards against totalSteps <= 0 by
+  // treating the sequence as a single step (index 0), so step never goes negative.
+  const maxStep = Math.max(totalSteps - 1, 0);
+
+  const [step, setStep] = useState(() =>
+    Math.min(Math.max(initialStep, 0), maxStep)
+  );
 
   const next = useCallback(() => {
-    setStep(s => Math.min(s + 1, totalSteps - 1));
-  }, [totalSteps]);
+    setStep(s => Math.min(s + 1, maxStep));
+  }, [maxStep]);
 
   const prev = useCallback(() => {
     setStep(s => Math.max(s - 1, 0));
   }, []);
 
   const goTo = useCallback((target: number) => {
-    setStep(Math.min(Math.max(target, 0), totalSteps - 1));
-  }, [totalSteps]);
+    setStep(Math.min(Math.max(target, 0), maxStep));
+  }, [maxStep]);
 
   const reset = useCallback(() => {
-    setStep(initialStep);
-  }, [initialStep]);
+    setStep(Math.min(Math.max(initialStep, 0), maxStep));
+  }, [initialStep, maxStep]);
 
   return {
     step,
     isFirst: step === 0,
-    isLast: step === totalSteps - 1,
+    isLast: step === maxStep,
     next,
     prev,
     goTo,

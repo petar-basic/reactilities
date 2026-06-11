@@ -28,6 +28,7 @@
   "exclude": [
     "**/*.test.*",
     "**/*.spec.*",
+    "**/*.typecheck.*",
     "**/test/**/*",
     "src/test/**/*"
   ]

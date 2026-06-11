@@ -1,9 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import { useEffect, useState } from 'react';
+
+/**
+ * A callback ref that also exposes the current element via `.current`.
+ *
+ * It is a valid React `ref` prop (a `RefCallback`), so `<div ref={ref}>` keeps
+ * working, while also behaving like a `RefObject` for reads (`ref.current`).
+ */
+export interface HoverRef<T extends HTMLElement> {
+  (node: T | null): void;
+  current: T | null;
+}
 
 /**
  * Hook for detecting when the user hovers over an element
  * Attaches mouseenter and mouseleave listeners to the returned ref
+ *
+ * Uses a state-backed callback ref so listeners are (re)attached whenever the
+ * target element changes — including elements rendered conditionally after
+ * mount, and elements that are removed/replaced (which resets `isHovered`).
  *
  * @returns Tuple of [ref, isHovered] — attach ref to the target element
  *
@@ -45,25 +59,43 @@ import type { RefObject } from 'react';
  *   return <a ref={ref} href={href}>{children}</a>;
  * }
  */
-export function useHover<T extends HTMLElement>(): [RefObject<T | null>, boolean] {
+export function useHover<T extends HTMLElement>(): [HoverRef<T>, boolean] {
   const [isHovered, setIsHovered] = useState(false);
-  const ref = useRef<T | null>(null);
+  const [element, setElement] = useState<T | null>(null);
+
+  // Hybrid callback ref (stable identity across renders): stores the node in
+  // state to re-run the listener effect, while also exposing `.current` for
+  // RefObject-style reads.
+  const [ref] = useState<HoverRef<T>>(() => {
+    const callback = ((node: T | null) => {
+      callback.current = node;
+      setElement(node);
+    }) as HoverRef<T>;
+    callback.current = null;
+    return callback;
+  });
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    if (!element) {
+      // No element attached (e.g. unmounted/removed) — never stay sticky.
+      setIsHovered(false);
+      return;
+    }
 
     const handleMouseEnter = () => setIsHovered(true);
     const handleMouseLeave = () => setIsHovered(false);
 
-    el.addEventListener('mouseenter', handleMouseEnter);
-    el.addEventListener('mouseleave', handleMouseLeave);
+    element.addEventListener('mouseenter', handleMouseEnter);
+    element.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
-      el.removeEventListener('mouseenter', handleMouseEnter);
-      el.removeEventListener('mouseleave', handleMouseLeave);
+      // Element is changing/detaching — drop any stale hover state so a
+      // removed/replaced node can't leave `isHovered` stuck at true.
+      setIsHovered(false);
+      element.removeEventListener('mouseenter', handleMouseEnter);
+      element.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, []);
+  }, [element]);
 
   return [ref, isHovered];
 }

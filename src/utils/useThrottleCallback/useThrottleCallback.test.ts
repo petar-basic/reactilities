@@ -121,6 +121,55 @@ describe('useThrottleCallback', () => {
     expect(result.current).toBe(first)
   })
 
+  it('should not double-invoke when a leading-edge call lands on a pending trailing timer', () => {
+    // The hook reads wall-clock time via Date.now() to decide the leading-edge branch,
+    // while scheduling the trailing call via setTimeout. To deterministically construct
+    // the race — a leading-edge call happening WHILE a trailing timer is still pending —
+    // we control Date.now() independently from the fake setTimeout queue.
+    let mockNow = 0
+    const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => mockNow)
+    try {
+      const callback = vi.fn()
+      const { result } = renderHook(() => useThrottleCallback(callback, 500))
+
+      // t=0: leading-edge call fires immediately and records lastCalled=0
+      mockNow = 0
+      act(() => {
+        result.current('a')
+      })
+      expect(callback).toHaveBeenCalledTimes(1)
+
+      // t=100: call during the throttle window schedules a trailing timer.
+      // delay = interval - (now - lastCalled) = 500 - 100 = 400ms (would fire at queue-time 400).
+      mockNow = 100
+      act(() => {
+        result.current('b')
+      })
+      expect(callback).toHaveBeenCalledTimes(1)
+
+      // t=500: a NEW call lands on the interval boundary (now 500 >= lastCalled 0 + 500),
+      // taking the immediate branch — while the trailing timer scheduled above is STILL pending
+      // (we have not advanced the fake timer queue at all). The fix must clearTimeout that pending
+      // timer here; otherwise it will fire next and double-invoke the callback.
+      mockNow = 500
+      act(() => {
+        result.current('c')
+      })
+      expect(callback).toHaveBeenCalledTimes(2)
+      expect(callback).toHaveBeenLastCalledWith('c')
+
+      // Flush the timer queue: the previously-pending trailing timer must NOT fire.
+      // Without clearTimeout in the immediate branch, this produces a 3rd invocation with 'b'.
+      act(() => {
+        vi.runOnlyPendingTimers()
+      })
+      expect(callback).toHaveBeenCalledTimes(2)
+      expect(callback).toHaveBeenLastCalledWith('c')
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
   it('should use default interval of 500ms', () => {
     const callback = vi.fn()
     const { result } = renderHook(() => useThrottleCallback(callback))

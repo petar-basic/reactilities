@@ -22,10 +22,10 @@ function Component() {
 
 ### Parameters
 
-- **`target`** (`RefObject<HTMLElement>`) - RefObject pointing to the target HTML element
-- **`eventName`** (`string`) - Name of the event to listen for (e.g., 'click', 'scroll')
-- **`handler`** (`(event: Event) => void`) - Event handler function to execute when event fires
-- **`options`** (`AddEventListenerOptions`, optional) - Event listener options (capture, passive, once, etc.)
+- **`target`** (`RefObject<HTMLElement> | HTMLElement | Window | Document | null`) - RefObject pointing to the target element, a direct element, or `window`/`document`. A late-mounted ref (`null` at first) gets the listener once the element appears, and the listener follows the element if it is replaced.
+- **`eventName`** (`string`) - Name of the event to listen for (e.g., 'click', 'scroll'). The handler's `event` argument is typed from the target's event map (e.g. `window` 'resize' → `UIEvent`, `document` 'keydown' → `KeyboardEvent`, `HTMLElement` 'click' → `MouseEvent`).
+- **`handler`** (`(event) => void`) - Event handler function to execute when event fires
+- **`options`** (`AddEventListenerOptions`, optional) - Event listener options (capture, passive, once, etc.). An inline object is fine — the listener is keyed on `capture`/`once`/`passive`, not object identity, so it does not re-register every render (and `{ once: true }` keeps its once-semantics).
 
 ### Returns
 
@@ -121,7 +121,7 @@ function ResizeDetector() {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const divRef = useRef<HTMLDivElement>(null);
   
-  useEventListener(window as any, 'resize', () => {
+  useEventListener(window, 'resize', () => {
     if (divRef.current) {
       setSize({
         width: divRef.current.offsetWidth,
@@ -142,14 +142,15 @@ function ResizeDetector() {
 
 - ✅ Automatic cleanup on unmount
 - ✅ Supports all DOM events
-- ✅ Event listener options support
-- ✅ TypeScript support
-- ✅ Safe ref handling
-- ✅ Uses `useEffectEvent` for stable handlers
+- ✅ Event listener options support (inline object is safe — no per-render churn)
+- ✅ Typed events per target (`window` / `document` / `HTMLElement`)
+- ✅ Safe ref handling, including late-mounted and replaced elements
+- ✅ Stable handler — latest handler is always called without re-subscribing
 
 ## Notes
 
-- Event listeners are automatically removed when component unmounts
-- Handler function is stable and won't cause re-subscriptions
-- Supports standard `AddEventListenerOptions` (capture, passive, once, signal)
-- Works with any HTML element type
+- Event listeners are automatically removed when the component unmounts
+- The target element is resolved on every render, so listeners attach to late-mounted refs once the element appears and follow the element if it is replaced
+- The handler is always up to date without re-registering the listener
+- Supports standard `AddEventListenerOptions` (capture, passive, once, signal); pass it inline freely — the listener is keyed on the option primitives, not object identity
+- Works with any HTML element, as well as `window` and `document`

@@ -54,12 +54,16 @@ export function useClipboard(resetDelay = 2000): UseClipboardReturn {
         textarea.value = text;
         textarea.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
         document.body.appendChild(textarea);
+        let ok: boolean;
         try {
           textarea.select();
-          document.execCommand('copy');
+          ok = document.execCommand('copy');
         } finally {
           document.body.removeChild(textarea);
         }
+        // execCommand('copy') returns false when the copy didn't happen
+        // (e.g. not user-initiated); don't report success in that case
+        if (!ok) return false;
       }
 
       setValue(text);

@@ -27,6 +27,8 @@ function ThemeToggle() {
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `storageKey` | `string` | `'color-scheme'` | localStorage key for persisting the preference |
+| `options` | `UseDarkModeOptions` | `{}` | Optional configuration |
+| `options.defaultDark` | `boolean` | `false` | Value assumed for the OS `prefers-color-scheme: dark` query during SSR and the first client render, before `window.matchMedia` can be read. Only affects the `'system'` scheme; an explicit `'dark'`/`'light'` preference always wins |
 
 ### Returns
 
@@ -101,3 +103,4 @@ html.dark { --bg: #1a1a1a; --text: #ffffff; }
 - To reset to system preference, call `setColorScheme('system')`
 - Preference persists across page reloads via localStorage
 - Reactively updates if the user changes their OS preference while `colorScheme === 'system'`
+- SSR-safe: the system-preference media query resolves to `options.defaultDark` (default `false` / light) during server-side rendering and the first client render instead of throwing, and the `dark` class is only toggled in an effect after mount — no hydration mismatch

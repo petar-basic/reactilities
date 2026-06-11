@@ -23,13 +23,13 @@ function ShoppingCart() {
 ### Parameters
 
 - **`key`** (`string`) - The sessionStorage key to manage
-- **`initialValue`** (`string`) - Initial value to use if key doesn't exist
+- **`initialValue`** (`T`) - Initial value to use if key doesn't exist
 
 ### Returns
 
-`[any, (value: string | ((prevValue: string) => string)) => void]` - Array containing:
+`[T, (value: T | ((prevValue: T) => T) | null | undefined) => void]` - Array containing:
 - **`storedValue`** - Current value from sessionStorage
-- **`setValue`** - Function to update the value
+- **`setValue`** - Function to update the value (supports functional updates; pass `null` or `undefined` to remove)
 
 ## Examples
 
@@ -179,7 +179,7 @@ function BlogEditor() {
 - ✅ Automatic JSON serialization/deserialization
 - ✅ Functional updates support
 - ✅ TypeScript support
-- ✅ SSR-safe (throws error on server)
+- ✅ SSR-safe (renders the initial value on the server, hydrates from storage after mount)
 - ✅ Handles sessionStorage errors gracefully
 
 ## Notes

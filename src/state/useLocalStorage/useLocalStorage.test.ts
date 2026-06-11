@@ -242,17 +242,165 @@ describe('useLocalStorage', () => {
 
   it('should update when localStorage changes externally', () => {
     const { result } = renderHook(() => useLocalStorage('test-key', 'initial-value'))
-    
+
     // Simulate external localStorage change
     localStorageMock.getItem.mockReturnValue(JSON.stringify('external-value'))
-    
+
     act(() => {
       window.dispatchEvent(new StorageEvent('storage', {
         key: 'test-key',
         newValue: JSON.stringify('external-value')
       }))
     })
-    
+
     expect(result.current[0]).toBe('external-value')
+  })
+
+  // ---------------------------------------------------------------------------
+  // Mutation-proof regression tests for the three fixed bugs.
+  //
+  // Several of these need localStorage to behave like a real store (a write is
+  // readable on the very next read) instead of the static return-value mock
+  // used above, so they install a small in-memory backing store first.
+  // ---------------------------------------------------------------------------
+
+  const useRealLocalStorageStore = () => {
+    const store = new Map<string, string>()
+    localStorageMock.getItem.mockImplementation((key: string) =>
+      store.has(key) ? store.get(key)! : null
+    )
+    localStorageMock.setItem.mockImplementation((key: string, value: string) => {
+      store.set(key, value)
+    })
+    localStorageMock.removeItem.mockImplementation((key: string) => {
+      store.delete(key)
+    })
+    return store
+  }
+
+  // BUG 1 — stable identity. Re-rendering without any storage change must return
+  // the SAME object reference. Fails on the pre-fix code (which re-ran
+  // JSON.parse on every render and produced a new object each time).
+  it('returns a stable object reference across renders when storage is unchanged', () => {
+    localStorageMock.getItem.mockReturnValue(JSON.stringify({ a: 1, nested: { b: 2 } }))
+
+    const { result, rerender } = renderHook(() =>
+      useLocalStorage('obj-key', { a: 0, nested: { b: 0 } })
+    )
+
+    const first = result.current[0]
+    rerender()
+    rerender()
+    const afterRerenders = result.current[0]
+
+    expect(afterRerenders).toBe(first)
+  })
+
+  it('returns a stable array reference across renders when storage is unchanged', () => {
+    localStorageMock.getItem.mockReturnValue(JSON.stringify([1, 2, 3]))
+
+    const { result, rerender } = renderHook(() => useLocalStorage<number[]>('arr-key', []))
+
+    const first = result.current[0]
+    rerender()
+    const second = result.current[0]
+
+    expect(second).toBe(first)
+  })
+
+  // BUG 3 — functional updates compose. Two functional updaters applied within a
+  // single act must compose (0 -> 2). Fails on the pre-fix code, which read a
+  // stale render-time `store` snapshot for both calls and yielded 1.
+  it('composes two functional updates applied in a single act (0 -> 2)', () => {
+    useRealLocalStorageStore()
+
+    const { result } = renderHook(() => useLocalStorage('counter', 0))
+
+    act(() => {
+      result.current[1]((v: number) => v + 1)
+      result.current[1]((v: number) => v + 1)
+    })
+
+    expect(result.current[0]).toBe(2)
+  })
+
+  it('composes many functional updates in a single act (0 -> 5)', () => {
+    useRealLocalStorageStore()
+
+    const { result } = renderHook(() => useLocalStorage('counter', 0))
+
+    act(() => {
+      for (let i = 0; i < 5; i++) {
+        result.current[1]((v: number) => v + 1)
+      }
+    })
+
+    expect(result.current[0]).toBe(5)
+  })
+
+  // BUG 3 (round-trip) — after setValue the RENDERED value reflects the new
+  // value. No existing test asserted the rendered output after a set.
+  it('reflects the new value in the rendered output after setValue (round-trip)', () => {
+    useRealLocalStorageStore()
+
+    const { result } = renderHook(() => useLocalStorage('rt-key', 'initial-value'))
+
+    act(() => {
+      result.current[1]('next-value')
+    })
+
+    expect(result.current[0]).toBe('next-value')
+  })
+
+  it('reflects a functional update in the rendered output after setValue', () => {
+    useRealLocalStorageStore()
+
+    const { result } = renderHook(() =>
+      useLocalStorage('rt-obj', { count: 0 })
+    )
+
+    act(() => {
+      result.current[1]((prev: { count: number }) => ({ count: prev.count + 1 }))
+    })
+
+    expect(result.current[0]).toEqual({ count: 1 })
+  })
+
+  // BUG 2 — SSR. getServerSnapshot must return the serialized initialValue and
+  // must NOT throw. Fails on the pre-fix code, which threw inside
+  // getServerSnapshot. We exercise the hook through renderToString to drive the
+  // server-snapshot path.
+  it('renders the initial value on the server without throwing (SSR)', async () => {
+    const { renderToString } = await import('react-dom/server')
+    const React = await import('react')
+
+    function SsrConsumer() {
+      const [value] = useLocalStorage('ssr-key', 'ssr-initial')
+      return React.createElement('span', null, String(value))
+    }
+
+    let html = ''
+    expect(() => {
+      html = renderToString(React.createElement(SsrConsumer))
+    }).not.toThrow()
+
+    expect(html).toContain('ssr-initial')
+  })
+
+  it('renders an initial object value on the server without throwing (SSR)', async () => {
+    const { renderToString } = await import('react-dom/server')
+    const React = await import('react')
+
+    function SsrConsumer() {
+      const [value] = useLocalStorage('ssr-obj', { theme: 'dark' })
+      return React.createElement('span', null, JSON.stringify(value))
+    }
+
+    let html = ''
+    expect(() => {
+      html = renderToString(React.createElement(SsrConsumer))
+    }).not.toThrow()
+
+    expect(html).toContain('dark')
   })
 })

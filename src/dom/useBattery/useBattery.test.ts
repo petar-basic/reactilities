@@ -65,9 +65,62 @@ describe('useBattery', () => {
     vi.clearAllMocks()
   })
 
-  it('should report isSupported as true when getBattery exists', () => {
+  it('should report isSupported as true when getBattery exists', async () => {
     const { result } = renderHook(() => useBattery())
+    // isSupported now resolves after mount (inside an effect), so flush effects.
+    await act(async () => {})
     expect(result.current.isSupported).toBe(true)
+  })
+
+  // MUTATION-PROOF (SSR hydration): isSupported must be `false` on the first
+  // render even when navigator.getBattery exists, so the server render and the
+  // client's first render agree. The hook's documented usage `if (!isSupported)
+  // return null` must therefore render the not-supported branch on the server.
+  //
+  // This fails on the buggy version (useState initializer returns `true`
+  // immediately), which renders the supported branch on the client's first pass
+  // while the server renders null -> hydration mismatch.
+  it('should render the not-supported branch on the server even when getBattery exists', async () => {
+    // getBattery IS defined here (set up in beforeEach), mirroring Chromium.
+    const { renderToString } = await import('react-dom/server')
+    const React = await import('react')
+
+    function SsrConsumer() {
+      const { isSupported, level } = useBattery()
+      if (!isSupported) return React.createElement('span', null, 'unsupported')
+      return React.createElement('span', null, `level:${level}`)
+    }
+
+    let html = ''
+    expect(() => {
+      html = renderToString(React.createElement(SsrConsumer))
+    }).not.toThrow()
+
+    expect(html).toContain('unsupported')
+    expect(html).not.toContain('level:')
+  })
+
+  // MUTATION-PROOF (first committed render vs post-effect): capture every value
+  // the hook returns. The first committed render must be `false` (proving the
+  // initializer does not compute support eagerly), and a later render must flip
+  // to `true` after the effect runs. Fails if support is computed in useState.
+  it('should start isSupported false on the first render then flip to true after effects', async () => {
+    const observed: boolean[] = []
+
+    renderHook(() => {
+      const { isSupported } = useBattery()
+      observed.push(isSupported)
+      return isSupported
+    })
+
+    // First committed render, before effects, must be false.
+    expect(observed[0]).toBe(false)
+
+    await act(async () => {})
+
+    // After effects run, support detection sets it to true.
+    expect(observed[observed.length - 1]).toBe(true)
+    expect(observed).toContain(true)
   })
 
   it('should report isSupported as false when getBattery is missing', () => {

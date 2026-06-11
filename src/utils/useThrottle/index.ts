@@ -34,14 +34,15 @@ export function useThrottle<T>(value: T, interval = 500): T {
   useEffect(() => {
     const now = Date.now();
 
-    if (lastUpdated.current && now >= lastUpdated.current + interval) {
+    if (lastUpdated.current === null || now >= lastUpdated.current + interval) {
       lastUpdated.current = now;
       setThrottledValue(value);
     } else {
+      const remaining = lastUpdated.current + interval - now;
       const id = setTimeout(() => {
         lastUpdated.current = Date.now();
         setThrottledValue(value);
-      }, interval);
+      }, remaining);
 
       return () => clearTimeout(id);
     }

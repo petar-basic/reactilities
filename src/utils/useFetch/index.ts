@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAsync } from '../useAsync';
 import type { UseAsyncReturn } from '../useAsync';
 
@@ -75,6 +75,15 @@ export function useFetch<T>(
 
     return response.json() as Promise<T>;
   }, [url, options]);
+
+  // Abort any in-flight request when the component unmounts so no fetch is left
+  // dangling. The AbortError is swallowed by useAsync, so this never produces an
+  // error state.
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   return useAsync<T>(fetchFn, immediate);
 }

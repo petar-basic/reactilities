@@ -1,4 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
+import { createElement } from 'react'
+import { renderToString } from 'react-dom/server'
 import { renderHook } from '@testing-library/react'
 import { fireEvent } from '@testing-library/react'
 import { useKeyboardShortcuts, createShortcut, COMMON_SHORTCUTS } from '../useKeyboardShortcuts'
@@ -130,6 +132,83 @@ describe('useKeyboardShortcuts', () => {
     // Should call the updated handler
     expect(handler2).toHaveBeenCalledTimes(1)
     expect(handler1).not.toHaveBeenCalled()
+  })
+
+  it('should server-render without document defined (SSR-safe default target)', () => {
+    // Faithful SSR reproduction: render a real component that calls the hook
+    // with no `target`, via react-dom/server's renderToString. On the server,
+    // React runs the render phase but NOT effects, and `document` does not
+    // exist. We delete `globalThis.document` to model that exactly.
+    //
+    // With the SSR fix, `document` is only referenced inside the effect (which
+    // the server never runs), so this renders cleanly. If the fix is reverted
+    // (default `target = document` back in the render-scope destructuring),
+    // rendering throws `ReferenceError: document is not defined`.
+    const realDocument = globalThis.document
+    const handler = vi.fn()
+
+    function Editor() {
+      useKeyboardShortcuts([{ key: 'a', handler }])
+      return createElement('textarea')
+    }
+
+    let renderError: unknown = null
+    let markup = ''
+    // @ts-expect-error - intentionally removing document to emulate SSR
+    delete globalThis.document
+    try {
+      markup = renderToString(createElement(Editor))
+    } catch (err) {
+      renderError = err
+    } finally {
+      globalThis.document = realDocument
+    }
+
+    expect(renderError).toBeNull()
+    expect(markup).toContain('<textarea')
+    // Effects never ran on the server, so the handler was never wired up.
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('should attach to document via the effect when no target is given', () => {
+    // Regression for the SSR fix: the default target must still resolve to
+    // `document` inside the effect, so the listener fires on document events.
+    const handler = vi.fn()
+    renderHook(() => useKeyboardShortcuts([{ key: 'k', handler }]))
+
+    fireEvent.keyDown(document, { key: 'k' })
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('should attach to a custom target and not to document', () => {
+    const handler = vi.fn()
+    const target = document.createElement('div')
+
+    renderHook(() => useKeyboardShortcuts([{ key: 'a', handler }], { target }))
+
+    // Event on the custom target is received.
+    fireEvent.keyDown(target, { key: 'a' })
+    expect(handler).toHaveBeenCalledTimes(1)
+
+    // Event on document is NOT received: proves the listener attached to the
+    // resolved custom target, not the default document.
+    fireEvent.keyDown(document, { key: 'a' })
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('should clean up the listener from the custom target on unmount', () => {
+    const handler = vi.fn()
+    const target = document.createElement('div')
+
+    const { unmount } = renderHook(() =>
+      useKeyboardShortcuts([{ key: 'a', handler }], { target })
+    )
+
+    unmount()
+    fireEvent.keyDown(target, { key: 'a' })
+
+    expect(handler).not.toHaveBeenCalled()
   })
 })
 

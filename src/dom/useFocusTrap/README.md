@@ -1,6 +1,8 @@
 # useFocusTrap
 
-Hook that traps keyboard focus within a container element while active. Focuses the first focusable element on activation and wraps Tab/Shift+Tab at the boundaries.
+Hook that traps keyboard focus within a container element while active. Focuses the first focusable element on activation, wraps Tab/Shift+Tab at the boundaries, and — because the listeners are bound to `document` — recaptures focus if it ever leaves the container (e.g. a click on the backdrop/body). On deactivation it restores focus to the element that was focused before the trap engaged.
+
+The hook is generic over the container element type, so the returned ref attaches directly to your element with no cast (`<div ref={ref} />`) under React 19 types.
 
 ## Usage
 
@@ -8,7 +10,7 @@ Hook that traps keyboard focus within a container element while active. Focuses 
 import { useFocusTrap } from 'reactilities';
 
 function Modal({ isOpen, onClose }) {
-  const ref = useFocusTrap(isOpen);
+  const ref = useFocusTrap<HTMLDivElement>(isOpen);
 
   if (!isOpen) return null;
 
@@ -36,9 +38,15 @@ function Modal({ isOpen, onClose }) {
 |-----------|------|---------|-------------|
 | `active` | `boolean` | `true` | Whether the focus trap is engaged |
 
+### Type Parameters
+
+| Parameter | Constraint | Default | Description |
+|-----------|------------|---------|-------------|
+| `T` | `extends HTMLElement` | `HTMLElement` | The container element type |
+
 ### Returns
 
-`RefObject<HTMLElement | null>` — attach to the container element via `ref`.
+`RefObject<T | null>` — attach to the container element via `ref`. Defaults to `HTMLElement`; pass the element type (e.g. `useFocusTrap<HTMLDivElement>()`) for a cast-free `ref`.
 
 ## Examples
 
@@ -46,7 +54,7 @@ function Modal({ isOpen, onClose }) {
 
 ```tsx
 function Drawer({ open, onClose }) {
-  const ref = useFocusTrap(open);
+  const ref = useFocusTrap<HTMLElement>(open);
 
   return (
     <aside
@@ -70,7 +78,7 @@ function Drawer({ open, onClose }) {
 
 ```tsx
 function SearchPanel({ isExpanded }) {
-  const ref = useFocusTrap(isExpanded);
+  const ref = useFocusTrap<HTMLDivElement>(isExpanded);
 
   return (
     <div ref={ref}>
@@ -95,5 +103,7 @@ The trap targets these elements (excluding disabled ones):
 - Focuses the first focusable child immediately on activation
 - Tab on the last element wraps to the first
 - Shift+Tab on the first element wraps to the last
+- Listeners are attached to `document`, so focus is recaptured even if it leaves the container (clicking the backdrop/body, programmatic focus, etc.) — the trap cannot be escaped while active
+- Restores focus to the previously focused element (e.g. the trigger) when the trap deactivates
 - Set `active={false}` to release the trap without unmounting the container
-- For accessibility, also consider managing `aria-hidden` on background content and restoring focus to the trigger element on close
+- For accessibility, also consider managing `aria-hidden` on background content

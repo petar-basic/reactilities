@@ -23,3 +23,6 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
+# tsup experimentalDts temp dir
+.tsup

@@ -90,6 +90,18 @@ const initialState = { status: 'idle' as const, data: null, error: null };
  *   );
  * }
  */
+/**
+ * Returns true if the rejection represents an aborted request, which should be
+ * silently ignored rather than surfaced as an error state.
+ */
+function isAbortError(err: unknown): boolean {
+  return (
+    err instanceof DOMException && err.name === 'AbortError'
+  ) || (
+    err instanceof Error && err.name === 'AbortError'
+  );
+}
+
 export function useAsync<T>(
   asyncFn: () => Promise<T>,
   immediate = true
@@ -97,6 +109,11 @@ export function useAsync<T>(
   const [state, dispatch] = useReducer(asyncReducer<T>, initialState);
   const mountedRef = useRef(true);
   const asyncFnRef = useRef(asyncFn);
+  // Monotonic token identifying the latest execute() call. Only the result of
+  // the latest call is allowed to dispatch, which (a) prevents an aborted
+  // previous request from surfacing as error state and (b) prevents an older,
+  // slower response from overwriting a newer one (out-of-order race).
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     asyncFnRef.current = asyncFn;
@@ -108,12 +125,20 @@ export function useAsync<T>(
   }, []);
 
   const execute = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     dispatch({ type: 'loading' });
     try {
       const data = await asyncFnRef.current();
-      if (mountedRef.current) dispatch({ type: 'success', data });
+      // Only the latest in-flight request may report success.
+      if (mountedRef.current && requestId === requestIdRef.current) {
+        dispatch({ type: 'success', data });
+      }
     } catch (err) {
-      if (mountedRef.current) {
+      // Aborted requests are an expected part of re-fetch/unmount and must never
+      // surface as an error state.
+      if (isAbortError(err)) return;
+      // Only the latest in-flight request may report an error.
+      if (mountedRef.current && requestId === requestIdRef.current) {
         dispatch({ type: 'error', error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
@@ -121,10 +146,13 @@ export function useAsync<T>(
 
   const reset = useCallback(() => dispatch({ type: 'reset' }), []);
 
+  // Run immediately on mount, and re-run whenever the async function identity
+  // changes (e.g. useFetch rebuilds its fetchFn when the url/options change).
+  // The request-token + abort handling above keep this safe under React
+  // StrictMode's double-invoke and across overlapping executions.
   useEffect(() => {
     if (immediate) execute();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [asyncFn, immediate, execute]);
 
   return {
     ...state,

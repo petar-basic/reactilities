@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useSpeechSynthesis } from './index'
+import { useSpeechSynthesis, INTERNAL_UTTERANCE_REF } from './index'
+import type { MutableRefObject } from 'react'
+
+// Read the hook's live utterance ref off the non-enumerable internal handle.
+// This exists so we can assert the GC-protection contract: the active utterance
+// must be retained (a strong JS reference held) while speaking and released on
+// end/error/cancel. See crbug.com/679437 — without a retained reference Chrome
+// can collect the utterance mid-speech, onend never fires, and isSpeaking sticks.
+const getUtteranceRef = (api: ReturnType<typeof useSpeechSynthesis>) =>
+  (api as unknown as Record<symbol, MutableRefObject<unknown>>)[INTERNAL_UTTERANCE_REF]
 
 const mockSpeak = vi.fn()
 const mockCancel = vi.fn()
@@ -172,5 +181,67 @@ describe('useSpeechSynthesis', () => {
     renderHook(() => useSpeechSynthesis())
     expect(mockGetVoices).toHaveBeenCalled()
     expect(mockAddEventListener).toHaveBeenCalledWith('voiceschanged', expect.any(Function))
+  })
+
+  // --- GC-protection contract (crbug.com/679437) ---
+  // These assert the hook keeps a live reference to the active utterance for the
+  // duration of speech, so Chrome cannot garbage-collect it mid-speech (which
+  // would prevent onend from firing and leave isSpeaking stuck at true). They are
+  // mutation-proof: removing the retention line, or any of the clears in
+  // onend/onerror/cancel, makes the corresponding assertion fail.
+
+  it('should retain the active utterance reference while speaking', () => {
+    const { result } = renderHook(() => useSpeechSynthesis())
+
+    act(() => {
+      result.current.speak('Hello')
+      lastUtterance?.onstart?.()
+    })
+
+    // The hook must hold the exact utterance it created and handed to speak().
+    expect(getUtteranceRef(result.current).current).toBe(lastUtterance)
+    expect(getUtteranceRef(result.current).current).not.toBeNull()
+  })
+
+  it('should release the retained utterance reference on utterance end', () => {
+    const { result } = renderHook(() => useSpeechSynthesis())
+
+    act(() => {
+      result.current.speak('Hello')
+      lastUtterance?.onstart?.()
+    })
+    expect(getUtteranceRef(result.current).current).toBe(lastUtterance)
+
+    act(() => { lastUtterance?.onend?.() })
+
+    expect(getUtteranceRef(result.current).current).toBeNull()
+  })
+
+  it('should release the retained utterance reference on utterance error', () => {
+    const { result } = renderHook(() => useSpeechSynthesis())
+
+    act(() => {
+      result.current.speak('Hello')
+      lastUtterance?.onstart?.()
+    })
+    expect(getUtteranceRef(result.current).current).toBe(lastUtterance)
+
+    act(() => { lastUtterance?.onerror?.() })
+
+    expect(getUtteranceRef(result.current).current).toBeNull()
+  })
+
+  it('should release the retained utterance reference on cancel', () => {
+    const { result } = renderHook(() => useSpeechSynthesis())
+
+    act(() => {
+      result.current.speak('Hello')
+      lastUtterance?.onstart?.()
+    })
+    expect(getUtteranceRef(result.current).current).toBe(lastUtterance)
+
+    act(() => { result.current.cancel() })
+
+    expect(getUtteranceRef(result.current).current).toBeNull()
   })
 })

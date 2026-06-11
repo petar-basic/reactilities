@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Stable default — defined at module level so it never changes reference
-const DEFAULT_EVENTS = ['mousemove', 'mousedown', 'keypress', 'touchmove', 'scroll', 'click'];
+const DEFAULT_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'touchmove', 'scroll', 'wheel', 'click'];
 
 interface UseIdleTimeoutOptions {
   timeout: number;

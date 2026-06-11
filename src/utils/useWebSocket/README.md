@@ -26,16 +26,43 @@ function Chat() {
 
 ## API
 
+### Signature
+
+```ts
+function useWebSocket(
+  socketUrl: string | null,
+  options?: UseWebSocketOptions
+): UseWebSocketReturn
+```
+
 ### Parameters
 
-- **`url`** (`string`) - WebSocket server URL
+- **`socketUrl`** (`string | null`) - WebSocket server URL. Pass `null` to defer connecting (or to disconnect an existing socket).
+- **`options`** (`UseWebSocketOptions`, optional) - Connection configuration:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `protocols` | `string \| string[]` | — | Sub-protocol(s) passed to the `WebSocket` constructor. Applied on the next (re)connect; you may pass an inline array without causing reconnects |
+| `reconnectAttempts` | `number` | `3` | Maximum number of reconnection attempts after a disconnect |
+| `reconnectInterval` | `number` | `3000` | Delay in milliseconds between reconnection attempts |
+| `shouldReconnect` | `(closeEvent: CloseEvent) => boolean` | `() => true` | Decides whether to reconnect for a given close event |
+| `onOpen` | `(event: Event) => void` | — | Called when the connection opens |
+| `onClose` | `(event: CloseEvent) => void` | — | Called when the connection closes |
+| `onError` | `(event: Event) => void` | — | Called on connection error |
+| `onMessage` | `(event: MessageEvent) => void` | — | Called for every received message |
+
+> Callback options are stored in refs, so passing them inline (e.g. `onMessage={() => ...}`) does not recreate the connection.
 
 ### Returns
 
-Object containing:
-- **`sendMessage`** (`(message: string) => void`) - Function to send messages
-- **`lastMessage`** (`MessageEvent | null`) - Last received message
-- **`readyState`** (`number`) - Connection state (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)
+| Property | Type | Description |
+|----------|------|-------------|
+| `sendMessage` | `(message: string \| ArrayBuffer \| Blob) => void` | Send a raw message. Warns and no-ops if the socket is not `OPEN` |
+| `sendJsonMessage` | `(message: unknown) => void` | `JSON.stringify` the value and send it |
+| `lastMessage` | `MessageEvent \| null` | The most recently received raw message event |
+| `lastJsonMessage` | `unknown` | `lastMessage.data` parsed as JSON, or `null` when there is no message or the payload is not valid JSON |
+| `readyState` | `0 \| 1 \| 2 \| 3` | Connection state: `0` = CONNECTING, `1` = OPEN, `2` = CLOSING, `3` = CLOSED |
+| `getWebSocket` | `() => WebSocket \| null` | Access the underlying `WebSocket` instance (or `null` if not connected) |
 
 ## Examples
 
@@ -71,6 +98,36 @@ function ChatRoom() {
         disabled={readyState !== 1}
       />
       <button onClick={handleSend} disabled={readyState !== 1}>
+        Send
+      </button>
+    </div>
+  );
+}
+```
+
+### JSON messaging with reconnection
+
+```tsx
+function LiveChat() {
+  const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
+    'ws://chat.example.com',
+    {
+      reconnectAttempts: 5,
+      reconnectInterval: 2000,
+      onOpen: () => console.log('Connected'),
+    }
+  );
+
+  const message = lastJsonMessage as { user: string; text: string } | null;
+
+  return (
+    <div>
+      <p>Status: {readyState === 1 ? 'Connected' : 'Reconnecting...'}</p>
+      {message && <p>{message.user}: {message.text}</p>}
+      <button
+        onClick={() => sendJsonMessage({ type: 'chat', text: 'Hello!' })}
+        disabled={readyState !== 1}
+      >
         Send
       </button>
     </div>
@@ -136,11 +193,14 @@ function NotificationCenter() {
 ## Features
 
 - ✅ Automatic connection management
-- ✅ Message sending/receiving
+- ✅ Configurable automatic reconnection (`reconnectAttempts`, `reconnectInterval`, `shouldReconnect`)
+- ✅ Lifecycle callbacks: `onOpen`, `onClose`, `onError`, `onMessage` (safe to pass inline)
+- ✅ JSON helpers: `sendJsonMessage` and parsed `lastJsonMessage`
+- ✅ Raw `sendMessage` accepting `string | ArrayBuffer | Blob`
+- ✅ `getWebSocket()` escape hatch for the underlying instance
 - ✅ Connection state tracking
-- ✅ Automatic cleanup on unmount
+- ✅ Automatic cleanup on unmount (no zombie reconnects)
 - ✅ TypeScript support
-- ✅ JSON message support
 
 ## Connection States
 
@@ -152,7 +212,9 @@ function NotificationCenter() {
 ## Notes
 
 - WebSocket connection is established on mount
-- Connection is closed on unmount
+- Connection is closed on unmount (the socket is closed intentionally and will not auto-reconnect)
+- Automatic reconnection only happens on genuine disconnects/errors, never after unmount or a `url` change
 - Messages can be sent only when `readyState === 1`
 - `lastMessage` contains the raw MessageEvent
 - Use `JSON.parse(lastMessage.data)` for JSON messages
+- `protocols` is read on each (re)connect; changing it does not by itself force a reconnect, and you may pass an inline array (e.g. `{ protocols: ['graphql-ws'] }`) without causing reconnect-on-every-render

@@ -125,6 +125,93 @@ describe('useRovingTabIndex', () => {
     expect(document.activeElement).toBe(items[1])
   })
 
+  // --- Mutation-proof DOM tabIndex roving tests ---
+  // These assert the ACTUAL rendered `tabIndex` attribute, not just document.activeElement.
+  // A ref-only implementation focuses the element but never re-renders, so the DOM
+  // `tabindex` attributes stay frozen (all roving items keep their initial values).
+  // These tests therefore fail on the ref-based bug and pass once focus is state-driven.
+
+  it('should render tabIndex=0 only on the first item initially (DOM)', () => {
+    render(<Menu count={3} />)
+    const items = screen.getAllByRole('listitem')
+    expect(items[0]).toHaveAttribute('tabindex', '0')
+    expect(items[1]).toHaveAttribute('tabindex', '-1')
+    expect(items[2]).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('should rove the DOM tabIndex attribute on ArrowDown', async () => {
+    const user = userEvent.setup()
+    render(<Menu count={3} />)
+    const items = screen.getAllByRole('listitem')
+
+    await act(async () => { items[0].focus() })
+    await user.keyboard('{ArrowDown}')
+
+    // Previously-active item must now be removed from the tab order...
+    expect(items[0]).toHaveAttribute('tabindex', '-1')
+    // ...and the newly-focused item must be the single tabbable element.
+    expect(items[1]).toHaveAttribute('tabindex', '0')
+    expect(items[2]).toHaveAttribute('tabindex', '-1')
+    // Programmatic focus must still have happened too.
+    expect(document.activeElement).toBe(items[1])
+  })
+
+  it('should rove the DOM tabIndex attribute on ArrowRight (horizontal)', async () => {
+    const user = userEvent.setup()
+    render(<Menu count={3} orientation="horizontal" />)
+    const items = screen.getAllByRole('listitem')
+
+    await act(async () => { items[0].focus() })
+    await user.keyboard('{ArrowRight}{ArrowRight}')
+
+    expect(items[0]).toHaveAttribute('tabindex', '-1')
+    expect(items[1]).toHaveAttribute('tabindex', '-1')
+    expect(items[2]).toHaveAttribute('tabindex', '0')
+    expect(document.activeElement).toBe(items[2])
+  })
+
+  it('should rove the DOM tabIndex attribute on Home/End', async () => {
+    const user = userEvent.setup()
+    render(<Menu count={3} />)
+    const items = screen.getAllByRole('listitem')
+
+    await act(async () => { items[0].focus() })
+    await user.keyboard('{End}')
+    expect(items[2]).toHaveAttribute('tabindex', '0')
+    expect(items[0]).toHaveAttribute('tabindex', '-1')
+
+    await user.keyboard('{Home}')
+    expect(items[0]).toHaveAttribute('tabindex', '0')
+    expect(items[2]).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('should rove the DOM tabIndex attribute when item is focused externally (onFocus)', async () => {
+    const user = userEvent.setup()
+    render(<Menu count={3} />)
+    const items = screen.getAllByRole('listitem')
+
+    // Simulate a click/focus landing on the last item, then arrow back.
+    await act(async () => { items[2].focus() })
+    await user.keyboard('{ArrowUp}')
+
+    expect(items[2]).toHaveAttribute('tabindex', '-1')
+    expect(items[1]).toHaveAttribute('tabindex', '0')
+    expect(document.activeElement).toBe(items[1])
+  })
+
+  it('should keep exactly one item with tabIndex=0 after several moves', async () => {
+    const user = userEvent.setup()
+    render(<Menu count={4} />)
+    const items = screen.getAllByRole('listitem')
+
+    await act(async () => { items[0].focus() })
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowUp}')
+
+    const tabbable = items.filter(el => el.getAttribute('tabindex') === '0')
+    expect(tabbable).toHaveLength(1)
+    expect(tabbable[0]).toBe(items[1])
+  })
+
   it('should return stable getContainerProps and getItemProps references', () => {
     const { result, rerender } = renderHook(() => useRovingTabIndex(3))
     const { getContainerProps, getItemProps } = result.current

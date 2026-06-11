@@ -1,4 +1,4 @@
-import { KeyboardEvent, useCallback, useEffect, useRef } from "react";
+import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 
 interface UseRovingTabIndexReturn {
   getContainerProps: () => {
@@ -51,15 +51,23 @@ export function useRovingTabIndex(
   options: { orientation?: 'vertical' | 'horizontal'; loop?: boolean } = {}
 ): UseRovingTabIndexReturn {
   const { orientation = 'vertical', loop = true } = options;
+  // The focused index lives in state so that changing it re-renders consumers and
+  // updates the DOM `tabIndex` attribute on each item (the core of the roving pattern).
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  // Mirror of focusedIndex kept in a ref so the memoized keyboard handler always
+  // reads the latest index without being recreated on every focus change (avoids stale closures).
   const focusedIndexRef = useRef(0);
+  focusedIndexRef.current = focusedIndex;
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
 
+  // Programmatically move DOM focus AND update state so the rendered tabIndex attributes rove.
   const focusItem = useCallback((index: number) => {
     const el = itemRefs.current[index];
     if (el) {
       el.focus();
-      focusedIndexRef.current = index;
     }
+    focusedIndexRef.current = index;
+    setFocusedIndex(index);
   }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -96,17 +104,30 @@ export function useRovingTabIndex(
     itemRefs.current.length = itemCount;
   }, [itemCount]);
 
+  // Keep the focused index in range if the list shrinks past the current selection.
+  useEffect(() => {
+    if (itemCount > 0 && focusedIndex > itemCount - 1) {
+      focusedIndexRef.current = itemCount - 1;
+      setFocusedIndex(itemCount - 1);
+    }
+  }, [itemCount, focusedIndex]);
+
   const getContainerProps = useCallback(() => ({
     onKeyDown: handleKeyDown
   }), [handleKeyDown]);
 
+  // getItemProps depends on focusedIndex so it produces fresh tabIndex values whenever
+  // focus moves; its identity changes only when the focused item actually changes.
   const getItemProps = useCallback((index: number) => ({
-    tabIndex: index === focusedIndexRef.current ? 0 : -1,
-    onFocus: () => { focusedIndexRef.current = index; },
+    tabIndex: index === focusedIndex ? 0 : -1,
+    onFocus: () => {
+      focusedIndexRef.current = index;
+      setFocusedIndex(index);
+    },
     ref: (el: HTMLElement | null) => {
       itemRefs.current[index] = el;
     }
-  }), []);
+  }), [focusedIndex]);
 
   return { getContainerProps, getItemProps };
 }

@@ -46,7 +46,7 @@ interface UseAutoSaveReturn {
  * // Manual save on Ctrl+S with auto-save fallback
  * const { status, save } = useAutoSave({ data: formData, onSave: submitDraft, delay: 3000 });
  *
- * useKeyboardShortcuts({ 'ctrl+s': save });
+ * useKeyboardShortcuts([{ key: 's', ctrl: true, handler: save }]);
  */
 export function useAutoSave<T>({
   data,
@@ -58,7 +58,7 @@ export function useAutoSave<T>({
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onSaveRef = useRef(onSave);
   const dataRef = useRef(data);
-  const isFirstRender = useRef(true);
+  const prevDataRef = useRef(data);
 
   onSaveRef.current = onSave;
   dataRef.current = data;
@@ -76,11 +76,14 @@ export function useAutoSave<T>({
   }, []);
 
   useEffect(() => {
-    // Skip auto-save on initial mount
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    // Only auto-save when the watched data actually changes. Comparing against
+    // the last-seen value (rather than a first-render flag) skips the initial
+    // mount, stays StrictMode-safe across mount→cleanup→remount, and avoids
+    // scheduling a save when only the `delay` option changes.
+    if (data === prevDataRef.current) {
       return;
     }
+    prevDataRef.current = data;
 
     setStatus('pending');
     clearTimeout(timerRef.current);

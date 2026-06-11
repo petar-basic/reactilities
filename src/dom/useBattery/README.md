@@ -103,5 +103,6 @@ function App() {
 ## Notes
 
 - The Battery Status API is not supported in all browsers (notably absent in Firefox for privacy reasons). Always check `isSupported` before rendering battery-dependent UI.
+- `isSupported` starts as `false` and resolves to its real value **after mount** (inside an effect). This keeps the server render and the client's first render in agreement, avoiding React hydration mismatches in SSR frameworks such as Next.js. Expect one post-mount re-render when support is detected — guard battery-dependent UI on `isSupported` rather than assuming it is correct on the first render.
 - `chargingTime` and `dischargingTime` may be `Infinity` when the values are not yet known
 - Level `1.0` means fully charged

@@ -179,15 +179,109 @@ describe('useCopyToClipboard', () => {
   it('should use fallback when clipboard API fails', async () => {
     mockWriteText.mockRejectedValue(new Error('Failed'))
     mockExecCommand.mockReturnValue(true)
-    
+
     const { result } = renderHook(() => useCopyToClipboard())
-    
+
     await act(async () => {
       result.current[1]('test')
     })
-    
+
     expect(mockWriteText).toHaveBeenCalledWith('test')
     expect(mockExecCommand).toHaveBeenCalledWith('copy')
     expect(result.current[0]).toBe('test')
+  })
+
+  it('should not leak a textarea when execCommand throws in the fallback', async () => {
+    // Force the legacy fallback path, then make execCommand throw.
+    mockWriteText.mockRejectedValue(new Error('Clipboard API failed'))
+    mockExecCommand.mockImplementation(() => {
+      throw new Error('execCommand blew up')
+    })
+
+    const { result } = renderHook(() => useCopyToClipboard())
+    // Baseline measured after mount so renderHook's own container is excluded.
+    const baselineTextareas = document.querySelectorAll('textarea').length
+
+    let copyResult: boolean | undefined
+    await act(async () => {
+      // handleCopy must not reject even though execCommand throws.
+      copyResult = await result.current[1]('leaky text')
+    })
+
+    // Mutation-proof rationale: without try/finally + removeChild in the
+    // fallback, the thrown execCommand leaves the temporary <textarea> attached
+    // to document.body. Asserting that no extra <textarea> remains in the DOM
+    // fails on the original code and only passes once the removeChild runs in a
+    // finally block. (Counting textareas, not all children, isolates this from
+    // renderHook's container element.)
+    expect(document.querySelectorAll('textarea').length).toBe(baselineTextareas)
+    // And specifically: no textarea carrying the copied value was left behind.
+    const leaked = Array.from(document.querySelectorAll('textarea')).some(
+      (ta) => ta.value === 'leaky text'
+    )
+    expect(leaked).toBe(false)
+    // The hook should report failure rather than rejecting.
+    expect(copyResult).toBe(false)
+    expect(result.current[0]).toBe(null)
+  })
+
+  it('should resolve true when the modern clipboard API succeeds', async () => {
+    mockWriteText.mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useCopyToClipboard())
+
+    let copyResult: boolean | undefined
+    await act(async () => {
+      copyResult = await result.current[1]('awaited text')
+    })
+
+    expect(copyResult).toBe(true)
+    expect(result.current[0]).toBe('awaited text')
+  })
+
+  it('should resolve true when the execCommand fallback succeeds', async () => {
+    mockWriteText.mockRejectedValue(new Error('Clipboard API failed'))
+    mockExecCommand.mockReturnValue(true)
+
+    const { result } = renderHook(() => useCopyToClipboard())
+
+    let copyResult: boolean | undefined
+    await act(async () => {
+      copyResult = await result.current[1]('fallback ok')
+    })
+
+    expect(copyResult).toBe(true)
+    expect(result.current[0]).toBe('fallback ok')
+  })
+
+  it('should resolve false (and not update state) when the fallback copy fails', async () => {
+    mockWriteText.mockRejectedValue(new Error('Clipboard API failed'))
+    mockExecCommand.mockReturnValue(false)
+
+    const { result } = renderHook(() => useCopyToClipboard())
+
+    let copyResult: boolean | undefined
+    await act(async () => {
+      copyResult = await result.current[1]('fallback fail')
+    })
+
+    expect(copyResult).toBe(false)
+    expect(result.current[0]).toBe(null)
+    // Textarea cleaned up on the success-returning-false path too.
+    expect(document.querySelector('textarea')).toBeNull()
+  })
+
+  it('should return a thenable Promise from the copy function', async () => {
+    mockWriteText.mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useCopyToClipboard())
+
+    let returned: unknown
+    await act(async () => {
+      returned = result.current[1]('promise check')
+      await returned
+    })
+
+    expect(returned).toBeInstanceOf(Promise)
   })
 })

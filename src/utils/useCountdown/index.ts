@@ -5,7 +5,11 @@ export interface UseCountdownOptions {
   countStart: number;
   /** Interval between ticks in milliseconds (default: 1000) */
   intervalMs?: number;
-  /** Value at which the countdown stops (default: 0) */
+  /**
+   * Value at which the timer automatically stops.
+   * Defaults to `0` in countdown mode and `Infinity` in count-up mode
+   * (so an unbounded stopwatch counts up forever until stopped manually).
+   */
   countStop?: number;
   /** Count up instead of down (default: false) */
   isIncrement?: boolean;
@@ -69,7 +73,7 @@ export interface UseCountdownReturn {
  * }
  *
  * @example
- * // Count-up stopwatch
+ * // Count-up stopwatch (unbounded — countStop defaults to Infinity when isIncrement)
  * function Stopwatch() {
  *   const { count, isRunning, start, stop, reset } = useCountdown({
  *     countStart: 0,
@@ -88,9 +92,13 @@ export interface UseCountdownReturn {
 export function useCountdown({
   countStart,
   intervalMs = 1000,
-  countStop = 0,
+  countStop,
   isIncrement = false,
 }: UseCountdownOptions): UseCountdownReturn {
+  // When the caller omits countStop, default to 0 for countdown mode and
+  // Infinity for count-up mode so an unbounded stopwatch keeps running.
+  // `0` passed explicitly is preserved (distinct from omission/undefined).
+  const resolvedCountStop = countStop ?? (isIncrement ? Infinity : 0);
   const [count, setCount] = useState(countStart);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -109,17 +117,17 @@ export function useCountdown({
     intervalRef.current = setInterval(() => {
       setCount(prev => {
         const next = isIncrement ? prev + 1 : prev - 1;
-        const isDone = isIncrement ? next >= countStop : next <= countStop;
+        const isDone = isIncrement ? next >= resolvedCountStop : next <= resolvedCountStop;
         if (isDone) {
           clearInterval(intervalRef.current);
           intervalRef.current = undefined;
           setIsRunning(false);
-          return countStop;
+          return resolvedCountStop;
         }
         return next;
       });
     }, intervalMs);
-  }, [intervalMs, countStop, isIncrement]);
+  }, [intervalMs, resolvedCountStop, isIncrement]);
 
   const reset = useCallback(() => {
     stop();

@@ -34,7 +34,11 @@ export function usePermission(
       return;
     }
 
+    let cancelled = false;
     let permissionStatus: PermissionStatus | null = null;
+
+    setLoading(true);
+    setState('prompt');
 
     const handleChange = () => {
       if (permissionStatus) {
@@ -46,16 +50,24 @@ export function usePermission(
       .query({ name: permissionName })
       .then((status) => {
         permissionStatus = status;
+        if (cancelled) {
+          status.removeEventListener('change', handleChange);
+          return;
+        }
         setState(status.state);
         setLoading(false);
         status.addEventListener('change', handleChange);
       })
       .catch(() => {
+        if (cancelled) {
+          return;
+        }
         setState('unsupported');
         setLoading(false);
       });
 
     return () => {
+      cancelled = true;
       permissionStatus?.removeEventListener('change', handleChange);
     };
   }, [permissionName]);

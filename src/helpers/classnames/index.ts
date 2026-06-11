@@ -17,14 +17,14 @@ export function classnames(...classes: ClassValue[]): string {
   const result: string[] = [];
 
   for (const cls of classes) {
-    if (cls === null || cls === undefined || cls === false || cls === true) continue;
-
-    if (typeof cls === 'string' || typeof cls === 'number') {
+    // Skip all falsy primitives (false, true, null, undefined, 0, NaN, '')
+    // to match clsx behaviour precisely.
+    if ((typeof cls === 'string' && cls) || (typeof cls === 'number' && cls)) {
       result.push(String(cls));
     } else if (Array.isArray(cls)) {
       const nested = classnames(...cls);
       if (nested) result.push(nested);
-    } else if (typeof cls === 'object') {
+    } else if (cls && typeof cls === 'object') {
       for (const [key, value] of Object.entries(cls)) {
         if (value) result.push(key);
       }

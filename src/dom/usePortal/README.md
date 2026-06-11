@@ -26,7 +26,7 @@ function Modal({ children, isOpen }: { children: ReactNode; isOpen: boolean }) {
 
 ### Parameters
 
-- **`id`** (`string`, optional) - `id` attribute to set on the created container element
+- **`id`** (`string`, optional) - `id` for a shared container. When provided, every hook instance using the same `id` resolves to a single DOM element (find-or-create): an existing element with that `id` is reused, otherwise one is created. Without an `id`, each instance gets its own private container created on mount and removed on unmount.
 
 ### Returns
 
@@ -111,10 +111,14 @@ const showToast = (message: string) => {
 - ✅ Creates and cleans up the container element automatically
 - ✅ Returns `null` before mount — safe to render conditionally without `createPortal` crashing
 - ✅ Optional `id` attribute for targeting with CSS or testing
-- ✅ Cleanup removes the container from the DOM on unmount
+- ✅ Shared containers: instances with the same `id` reuse one element (find-or-create, refcounted)
+- ✅ Cleanup removes the container from the DOM only when the last consumer unmounts
 
 ## Notes
 
 - Always check `if (!container) return null` before calling `createPortal` — the container is `null` on the first render
 - The container `div` is appended directly to `document.body`
-- The `id` prop is memoized — changing it after mount creates a new container
+- When an `id` is provided, the container is shared and reference-counted: multiple instances with the same `id` resolve to a single DOM element, and it is removed only when the last consumer unmounts
+- A pre-existing element with the given `id` (e.g. server-rendered or placed by other code) is reused and left in the DOM on cleanup — only containers the hook itself created are removed
+- Without an `id`, each instance creates its own container on mount and removes it on unmount
+- Changing the `id` after mount switches to (or creates) the container for the new `id`

@@ -2,15 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type WorkerStatus = 'idle' | 'running' | 'success' | 'error';
 
-interface UseWorkerReturn<T> {
-  result: T | null;
+interface UseWorkerReturn<TArgs extends unknown[], TResult> {
+  result: TResult | null;
   error: Error | null;
   status: WorkerStatus;
-  run: (...args: unknown[]) => void;
+  run: (...args: TArgs) => void;
   terminate: () => void;
 }
 
-function createWorkerFromFn(fn: (...args: unknown[]) => unknown): Worker {
+function createWorkerFromFn(fn: (...args: never[]) => unknown): Worker {
   const script = `
     self.onmessage = function(e) {
       var fn = ${fn.toString()};
@@ -68,8 +68,10 @@ function createWorkerFromFn(fn: (...args: unknown[]) => unknown): Worker {
  *
  * useEffect(() => { run(millionNumbers); }, []);
  */
-export function useWorker<T>(fn: (...args: unknown[]) => T): UseWorkerReturn<T> {
-  const [result, setResult] = useState<T | null>(null);
+export function useWorker<TArgs extends unknown[], TResult>(
+  fn: (...args: TArgs) => TResult
+): UseWorkerReturn<TArgs, TResult> {
+  const [result, setResult] = useState<TResult | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [status, setStatus] = useState<WorkerStatus>('idle');
   const workerRef = useRef<Worker | null>(null);
@@ -83,7 +85,7 @@ export function useWorker<T>(fn: (...args: unknown[]) => T): UseWorkerReturn<T> 
     setStatus('idle');
   }, []);
 
-  const run = useCallback((...args: unknown[]) => {
+  const run = useCallback((...args: TArgs) => {
     // Terminate any existing worker before starting a new one
     workerRef.current?.terminate();
 
@@ -92,7 +94,7 @@ export function useWorker<T>(fn: (...args: unknown[]) => T): UseWorkerReturn<T> 
     setStatus('running');
     setError(null);
 
-    worker.onmessage = (event: MessageEvent<{ result?: T; error?: string }>) => {
+    worker.onmessage = (event: MessageEvent<{ result?: TResult; error?: string }>) => {
       if (event.data.error) {
         setError(new Error(event.data.error));
         setStatus('error');

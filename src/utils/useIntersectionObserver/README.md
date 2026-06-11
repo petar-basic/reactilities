@@ -8,27 +8,38 @@ Hook for detecting when an element enters or exits the viewport using the Inters
 import { useIntersectionObserver } from 'reactilities';
 
 function LazyImage({ src }) {
-  const ref = useRef(null);
-  const isVisible = useIntersectionObserver(ref);
-  
+  const { ref, isIntersecting } = useIntersectionObserver<HTMLDivElement>();
+
   return (
     <div ref={ref}>
-      {isVisible && <img src={src} alt="Lazy loaded" />}
+      {isIntersecting && <img src={src} alt="Lazy loaded" />}
     </div>
   );
 }
 ```
 
+> Pass the element type as a type argument (e.g. `useIntersectionObserver<HTMLDivElement>()`)
+> so the returned `ref` matches the JSX element you attach it to. It defaults to
+> `HTMLElement` if omitted.
+
 ## API
+
+### Type parameter
+
+- **`T extends HTMLElement = HTMLElement`** - the type of the element you attach `ref` to.
 
 ### Parameters
 
-- **`ref`** (`RefObject<HTMLElement>`) - React ref pointing to the element to observe
-- **`options`** (`IntersectionObserverInit`, optional) - Intersection Observer options
+- **`options`** (`IntersectionObserverInit & { freezeOnceVisible?: boolean }`, optional) - native Intersection Observer options plus:
+  - **`freezeOnceVisible`** (`boolean`, default `false`) - once the element becomes visible, stop observing and keep the state frozen as visible.
 
 ### Returns
 
-`boolean` - `true` if element is intersecting (visible), `false` otherwise
+An object:
+
+- **`ref`** (`RefObject<T | null>`) - attach to the element you want to observe.
+- **`isIntersecting`** (`boolean`) - `true` while the element is intersecting (visible).
+- **`entry`** (`IntersectionObserverEntry | null`) - the latest observer entry, or `null` before the first event.
 
 ## Examples
 
@@ -36,15 +47,14 @@ function LazyImage({ src }) {
 
 ```tsx
 function LazyImage({ src, alt }) {
-  const imgRef = useRef(null);
-  const isVisible = useIntersectionObserver(imgRef, {
+  const { ref, isIntersecting } = useIntersectionObserver<HTMLDivElement>({
     threshold: 0.1,
-    rootMargin: '50px'
+    rootMargin: '50px',
   });
-  
+
   return (
-    <div ref={imgRef} className="image-container">
-      {isVisible ? (
+    <div ref={ref} className="image-container">
+      {isIntersecting ? (
         <img src={src} alt={alt} />
       ) : (
         <div className="placeholder">Loading...</div>
@@ -58,14 +68,13 @@ function LazyImage({ src, alt }) {
 
 ```tsx
 function FadeInSection({ children }) {
-  const ref = useRef(null);
-  const isVisible = useIntersectionObserver(ref, { threshold: 0.3 });
-  
+  const { ref, isIntersecting } = useIntersectionObserver<HTMLDivElement>({
+    threshold: 0.3,
+    freezeOnceVisible: true,
+  });
+
   return (
-    <div 
-      ref={ref}
-      className={`fade-in ${isVisible ? 'visible' : ''}`}
-    >
+    <div ref={ref} className={`fade-in ${isIntersecting ? 'visible' : ''}`}>
       {children}
     </div>
   );
@@ -77,23 +86,22 @@ function FadeInSection({ children }) {
 ```tsx
 function InfiniteList() {
   const [items, setItems] = useState([]);
-  const loaderRef = useRef(null);
-  const isLoaderVisible = useIntersectionObserver(loaderRef);
-  
+  const { ref, isIntersecting } = useIntersectionObserver<HTMLDivElement>();
+
   useEffect(() => {
-    if (isLoaderVisible) {
-      loadMoreItems().then(newItems => {
-        setItems(prev => [...prev, ...newItems]);
+    if (isIntersecting) {
+      loadMoreItems().then((newItems) => {
+        setItems((prev) => [...prev, ...newItems]);
       });
     }
-  }, [isLoaderVisible]);
-  
+  }, [isIntersecting]);
+
   return (
     <div>
-      {items.map(item => (
+      {items.map((item) => (
         <div key={item.id}>{item.content}</div>
       ))}
-      <div ref={loaderRef}>Loading more...</div>
+      <div ref={ref}>Loading more...</div>
     </div>
   );
 }
@@ -103,20 +111,17 @@ function InfiniteList() {
 
 ```tsx
 function TrackableSection({ id, children }) {
-  const ref = useRef(null);
-  const isVisible = useIntersectionObserver(ref, { threshold: 0.5 });
-  
+  const { ref, isIntersecting } = useIntersectionObserver<HTMLElement>({
+    threshold: 0.5,
+  });
+
   useEffect(() => {
-    if (isVisible) {
+    if (isIntersecting) {
       analytics.track('Section Viewed', { sectionId: id });
     }
-  }, [isVisible, id]);
-  
-  return (
-    <section ref={ref}>
-      {children}
-    </section>
-  );
+  }, [isIntersecting, id]);
+
+  return <section ref={ref}>{children}</section>;
 }
 ```
 
@@ -124,36 +129,37 @@ function TrackableSection({ id, children }) {
 
 ```tsx
 function AutoPlayVideo({ src }) {
-  const videoRef = useRef(null);
-  const isVisible = useIntersectionObserver(videoRef, { threshold: 0.5 });
-  
+  const { ref, isIntersecting } = useIntersectionObserver<HTMLVideoElement>({
+    threshold: 0.5,
+  });
+
   useEffect(() => {
-    if (videoRef.current) {
-      if (isVisible) {
-        videoRef.current.play();
-      } else {
-        videoRef.current.pause();
-      }
+    if (!ref.current) return;
+    if (isIntersecting) {
+      ref.current.play();
+    } else {
+      ref.current.pause();
     }
-  }, [isVisible]);
-  
-  return <video ref={videoRef} src={src} muted loop />;
+  }, [isIntersecting]);
+
+  return <video ref={ref} src={src} muted loop />;
 }
 ```
 
 ## Features
 
 - ✅ Viewport visibility detection
-- ✅ Configurable thresholds
+- ✅ Configurable thresholds (including inline arrays like `[0, 0.5, 1]` without re-render churn)
 - ✅ Root margin support
+- ✅ Attaches even when the target element mounts after the first render
 - ✅ Automatic cleanup
-- ✅ TypeScript support
+- ✅ Strongly typed, generic ref (`useIntersectionObserver<HTMLDivElement>()`)
 - ✅ Performance optimized
 
 ## Notes
 
-- Uses native Intersection Observer API
-- Automatically disconnects observer on unmount
-- Supports all Intersection Observer options
-- Perfect for lazy loading and scroll animations
-- More performant than scroll event listeners
+- Uses the native Intersection Observer API.
+- Automatically unobserves the element on unmount.
+- Inline array/object options (e.g. `threshold: [0, 0.5, 1]`) are normalized internally, so passing them inline does not recreate the observer on every render.
+- The returned `ref` is a standard `RefObject` (you can read `ref.current`); assigning it to a late-mounted element still attaches the observer.
+- More performant than scroll event listeners.

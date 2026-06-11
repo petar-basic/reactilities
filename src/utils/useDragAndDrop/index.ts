@@ -110,7 +110,10 @@ export function useDragAndDrop({
   const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault();
     dragCounterRef.current--;
-    if (dragCounterRef.current === 0) {
+    // Clamp at zero so a stray dragleave (e.g. after a drop reset the counter)
+    // can't wedge the counter negative and stick isDragging at true.
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
       setIsDragging(false);
     }
   }, []);
