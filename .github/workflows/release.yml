@@ -1,14 +1,18 @@
 name: Release
 
-# Publishes to npm with provenance when a GitHub Release is published.
-# Requires an NPM_TOKEN repository secret (an npm automation token).
+# Publishes to npm via OIDC Trusted Publishing (no NPM_TOKEN needed).
+# Provenance is generated automatically when publishing this way.
+# npm Trusted Publisher must be configured with:
+#   repository: petar-basic/reactilities
+#   workflow filename: release.yml   (must match THIS file's name)
+#   environment: (leave blank — this job sets no environment)
 on:
   release:
     types: [published]
 
 permissions:
   contents: read
-  id-token: write # required for npm provenance
+  id-token: write # required for npm OIDC trusted publishing + provenance
 
 jobs:
   publish:
@@ -18,8 +22,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          # Node 24 ships npm >= 11.5.1, required for OIDC trusted publishing.
+          node-version: 24
           registry-url: https://registry.npmjs.org
       - run: npm ci
       - name: Verify (lint, types, tests, package)
@@ -30,7 +34,5 @@ jobs:
           npm run build
           npm run publint
           npm run attw
-      - name: Publish
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish (OIDC trusted publishing, automatic provenance)
+        run: npm publish
