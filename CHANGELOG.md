@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-06-11
+
 A correctness, SSR, and packaging overhaul. Every fix below ships with a
 regression test (verified to fail before the fix).
 
